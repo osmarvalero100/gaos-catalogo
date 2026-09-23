@@ -45,7 +45,7 @@ export const BrandContactEditor: React.FC<BrandContactEditorProps> = ({
               type="text"
               value={catalog.brandName}
               onChange={(e) => onChange({ ...catalog, brandName: e.target.value })}
-              placeholder="Ej. Lumina Candles Studio"
+              placeholder="Ej. GAOS CANDLES"
               className="w-full px-3 py-2 text-xs border rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none"
             />
           </div>

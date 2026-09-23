@@ -70,7 +70,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
           <div className="hidden sm:block">
             <div className="flex items-center gap-1.5">
               <span className="text-xs font-black uppercase tracking-wider text-stone-200">
-                Lumina Studio
+                GAOS CANDLES
               </span>
               <span className="text-[10px] px-1.5 py-0.2 rounded-sm bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">
                 v2.0 DB

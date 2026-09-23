@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Generador de Catálogos de Velas Artesanales | Lumina Studio',
+  title: 'Generador de Catálogos de Velas Artesanales | GAOS CANDLES',
   description: 'Crea, personaliza y exporta catálogos profesionales para tus velas y productos artesanales por temporadas (Navidad, San Valentín, Día de la Madre). Con soporte PDF y URL compartible.',
 };
 
