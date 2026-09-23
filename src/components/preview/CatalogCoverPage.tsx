@@ -16,9 +16,9 @@ export const CatalogCoverPage: React.FC<CatalogCoverPageProps> = ({
 
   return (
     <div
-      className={`catalog-page relative w-full aspect-[1/1.414] mx-auto p-12 md:p-16 flex flex-col justify-between overflow-hidden ${
-        isPrintMode ? 'shadow-none rounded-none' : 'shadow-xl rounded-sm'
-      } print:shadow-none print:m-0 print:rounded-none`}
+      className={`catalog-page relative w-full min-h-0 md:aspect-[1/1.414] mx-auto p-6 sm:p-8 md:p-16 flex flex-col justify-between overflow-visible md:overflow-hidden ${
+        isPrintMode ? 'shadow-none rounded-none aspect-[1/1.414] overflow-hidden' : 'shadow-xl rounded-sm'
+      } print:shadow-none print:m-0 print:rounded-none print:aspect-[1/1.414] print:overflow-hidden`}
       style={{
         backgroundColor: palette.background,
         color: palette.textPrimary,
@@ -26,18 +26,18 @@ export const CatalogCoverPage: React.FC<CatalogCoverPageProps> = ({
     >
       {/* Subtle Frame / Border Accents */}
       <div
-        className="absolute inset-5 pointer-events-none border opacity-40 print:inset-4"
+        className="absolute inset-3 sm:inset-5 pointer-events-none border opacity-40 print:inset-4"
         style={{ borderColor: palette.primary }}
       />
       <div
-        className="absolute inset-7 pointer-events-none border opacity-15 print:inset-6"
+        className="absolute inset-5 sm:inset-7 pointer-events-none border opacity-15 print:inset-6"
         style={{ borderColor: palette.secondary }}
       />
 
       {/* Top Header / Brand Logo & Season Badge */}
       <div className="relative z-10 flex flex-col items-center text-center pt-2">
         <div
-          className="w-12 h-12 rounded-full flex items-center justify-center mb-3 shadow-xs"
+          className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mb-2 sm:mb-3 shadow-xs"
           style={{
             backgroundColor: `${palette.primary}15`,
             color: palette.primary,
@@ -48,10 +48,10 @@ export const CatalogCoverPage: React.FC<CatalogCoverPageProps> = ({
               src={catalog.brandLogo}
               alt={catalog.brandName}
               crossOrigin="anonymous"
-              className="w-8 h-8 object-contain"
+              className="w-7 h-7 sm:w-8 sm:h-8 object-contain"
             />
           ) : (
-            <Flame className="w-6 h-6" />
+            <Flame className="w-5 h-5 sm:w-6 sm:h-6" />
           )}
         </div>
 
@@ -64,7 +64,7 @@ export const CatalogCoverPage: React.FC<CatalogCoverPageProps> = ({
 
         {catalog.seasonTag && (
           <span
-            className="mt-2 inline-block px-3 py-1 rounded-full text-[11px] uppercase tracking-widest font-medium"
+            className="mt-2 inline-block px-3 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-[11px] uppercase tracking-widest font-medium"
             style={{
               backgroundColor: `${palette.secondary}20`,
               color: palette.primary,
@@ -77,9 +77,9 @@ export const CatalogCoverPage: React.FC<CatalogCoverPageProps> = ({
       </div>
 
       {/* Hero Featured Photography */}
-      <div className="relative z-10 my-4 flex-1 flex flex-col items-center justify-center max-h-[50%]">
+      <div className="relative z-10 my-3 sm:my-4 flex-1 flex flex-col items-center justify-center w-full">
         <div
-          className="w-full h-full max-h-[380px] overflow-hidden rounded-sm shadow-md border"
+          className="w-full max-h-[220px] sm:max-h-[300px] md:max-h-[380px] overflow-hidden rounded-sm shadow-md border"
           style={{ borderColor: `${palette.border}` }}
         >
           <img
@@ -92,23 +92,23 @@ export const CatalogCoverPage: React.FC<CatalogCoverPageProps> = ({
       </div>
 
       {/* Title & Editorial Description */}
-      <div className="relative z-10 text-center flex flex-col items-center max-w-xl mx-auto pb-4">
+      <div className="relative z-10 text-center flex flex-col items-center max-w-xl mx-auto pb-2 sm:pb-4">
         <h1
-          className="font-serif text-3xl md:text-5xl font-normal tracking-wide uppercase leading-tight mb-3"
+          className="font-serif text-2xl sm:text-3xl md:text-5xl font-normal tracking-wide uppercase leading-tight mb-2 md:mb-3"
           style={{ color: palette.primary }}
         >
           {catalog.title}
         </h1>
 
         <p
-          className="font-serif italic text-base md:text-lg opacity-85 mb-4"
+          className="font-serif italic text-sm sm:text-base md:text-lg opacity-85 mb-2 sm:mb-4"
           style={{ color: palette.textSecondary }}
         >
           {catalog.subtitle}
         </p>
 
         <div
-          className="w-24 h-[1px] my-3"
+          className="w-20 sm:w-24 h-[1px] my-2 sm:my-3"
           style={{ backgroundColor: palette.secondary }}
         />
 
@@ -121,7 +121,8 @@ export const CatalogCoverPage: React.FC<CatalogCoverPageProps> = ({
       </div>
 
       {/* Bottom Footer Details */}
-      <div className="relative z-10 pt-4 border-t flex justify-between items-center text-[10px] md:text-xs tracking-wider uppercase opacity-70"
+      <div
+        className="relative z-10 pt-3 sm:pt-4 border-t flex justify-between items-center text-[10px] md:text-xs tracking-wider uppercase opacity-70"
         style={{ borderColor: `${palette.border}` }}
       >
         <span>{contact.instagram || '@tumarca'}</span>

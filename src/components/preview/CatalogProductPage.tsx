@@ -36,16 +36,17 @@ export const CatalogProductPage: React.FC<CatalogProductPageProps> = ({
 
   return (
     <div
-      className={`catalog-page relative w-full aspect-[1/1.414] mx-auto p-8 md:p-12 flex flex-col justify-between overflow-hidden ${
-        isPrintMode ? 'shadow-none rounded-none' : 'shadow-xl rounded-sm'
-      } print:shadow-none print:m-0 print:rounded-none`}
+      className={`catalog-page relative w-full min-h-0 md:aspect-[1/1.414] mx-auto p-4 sm:p-6 md:p-12 flex flex-col justify-between overflow-visible md:overflow-hidden ${
+        isPrintMode ? 'shadow-none rounded-none aspect-[1/1.414] overflow-hidden' : 'shadow-xl rounded-sm'
+      } print:shadow-none print:m-0 print:rounded-none print:aspect-[1/1.414] print:overflow-hidden`}
       style={{
         backgroundColor: palette.background,
         color: palette.textPrimary,
       }}
     >
       {/* Page Header */}
-      <div className="relative z-10 pb-4 border-b flex items-center justify-between"
+      <div
+        className="relative z-10 pb-3 md:pb-4 border-b flex items-center justify-between"
         style={{ borderColor: palette.border }}
       >
         <div>
@@ -56,7 +57,7 @@ export const CatalogProductPage: React.FC<CatalogProductPageProps> = ({
             {catalog.brandName} · {catalog.seasonTag}
           </span>
           <h2
-            className="font-serif text-xl md:text-2xl font-normal uppercase tracking-wide mt-0.5"
+            className="font-serif text-lg sm:text-xl md:text-2xl font-normal uppercase tracking-wide mt-0.5"
             style={{ color: palette.primary }}
           >
             {sectionTitle}
@@ -70,22 +71,32 @@ export const CatalogProductPage: React.FC<CatalogProductPageProps> = ({
       </div>
 
       {/* Products Grid (2 products per editorial A4 page for high luxury presentation) */}
-      <div className={`relative z-10 my-auto py-2 grid ${isPrintMode ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-2'} print:grid-cols-2 gap-6 md:gap-8 flex-1 items-start`}>
+      <div
+        className={`relative z-10 my-3 md:my-auto py-2 grid ${
+          isPrintMode ? 'grid-cols-2' : 'grid-cols-1 md:grid-cols-2'
+        } print:grid-cols-2 gap-5 md:gap-8 flex-1 items-start w-full`}
+      >
         {products.map((product) => (
           <div
             key={product.id}
-            className={`group flex flex-col h-full bg-white/60 ${isPrintMode ? '' : 'backdrop-blur-xs'} rounded-md border p-4 md:p-5 shadow-2xs hover:shadow-md transition-all`}
+            className={`group flex flex-col h-full bg-white/70 ${
+              isPrintMode ? '' : 'backdrop-blur-xs'
+            } rounded-lg md:rounded-md border p-4 sm:p-5 shadow-2xs hover:shadow-md transition-all`}
             style={{
               borderColor: palette.border,
               backgroundColor: palette.cardBackground,
             }}
           >
             {/* Product Image */}
-            <div className="relative aspect-square w-full overflow-hidden rounded-sm bg-stone-100 mb-3.5 border"
+            <div
+              className="relative aspect-square sm:aspect-square w-full max-h-72 sm:max-h-80 md:max-h-none overflow-hidden rounded-md md:rounded-sm bg-stone-100 mb-3.5 border shrink-0"
               style={{ borderColor: palette.border }}
             >
               <img
-                src={product.image || 'https://images.unsplash.com/photo-1570823635306-250abb06d4b3?auto=format&fit=crop&w=600&q=80'}
+                src={
+                  product.image ||
+                  'https://images.unsplash.com/photo-1570823635306-250abb06d4b3?auto=format&fit=crop&w=600&q=80'
+                }
                 alt={product.name}
                 crossOrigin="anonymous"
                 className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
@@ -106,7 +117,7 @@ export const CatalogProductPage: React.FC<CatalogProductPageProps> = ({
 
             {/* Title & SKU & Price */}
             <div className="flex flex-col gap-1 mb-2">
-              <div className="flex items-baseline justify-between gap-2">
+              <div className="flex flex-wrap sm:flex-nowrap items-baseline justify-between gap-1.5 sm:gap-2">
                 <h3
                   className="font-serif text-lg md:text-xl font-medium leading-tight"
                   style={{ color: palette.primary }}
@@ -131,7 +142,7 @@ export const CatalogProductPage: React.FC<CatalogProductPageProps> = ({
 
             {/* Short Description */}
             <p
-              className="text-xs leading-relaxed opacity-85 mb-3 line-clamp-3"
+              className="text-xs leading-relaxed opacity-85 mb-3 line-clamp-4 md:line-clamp-3"
               style={{ color: palette.textSecondary }}
             >
               {product.description}
@@ -168,17 +179,18 @@ export const CatalogProductPage: React.FC<CatalogProductPageProps> = ({
 
             {/* Extra Specs: Burn Time / Wax Type */}
             {(product.burnTimeHours || product.waxType) && (
-              <div className="flex items-center gap-3 text-[11px] text-slate-500 pt-2 border-t mt-auto"
+              <div
+                className="flex flex-wrap items-center gap-3 text-[11px] text-slate-500 pt-2 border-t mt-auto mb-2"
                 style={{ borderColor: `${palette.border}80` }}
               >
                 {product.burnTimeHours && (
                   <span className="flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> ~{product.burnTimeHours}h duración
+                    <Clock className="w-3.5 h-3.5" /> ~{product.burnTimeHours}h duración
                   </span>
                 )}
                 {product.waxType && (
                   <span className="flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" /> {product.waxType}
+                    <Sparkles className="w-3.5 h-3.5" /> {product.waxType}
                   </span>
                 )}
               </div>
@@ -189,13 +201,13 @@ export const CatalogProductPage: React.FC<CatalogProductPageProps> = ({
               <button
                 type="button"
                 onClick={() => handleWhatsAppOrder(product)}
-                className="mt-3 w-full py-1.5 px-3 rounded-md text-xs font-medium flex items-center justify-center gap-1.5 transition-all shadow-2xs hover:opacity-90 active:scale-98 print:hidden"
+                className="mt-2 w-full py-2 px-3 rounded-lg md:rounded-md text-xs font-semibold flex items-center justify-center gap-1.5 transition-all shadow-xs hover:opacity-90 active:scale-98 print:hidden"
                 style={{
                   backgroundColor: palette.primary,
                   color: '#FFFFFF',
                 }}
               >
-                <MessageCircle className="w-3.5 h-3.5" />
+                <MessageCircle className="w-4 h-4" />
                 <span>Pedir esta vela por WhatsApp</span>
               </button>
             )}

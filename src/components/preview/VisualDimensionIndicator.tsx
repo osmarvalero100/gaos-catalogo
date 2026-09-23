@@ -55,14 +55,14 @@ export const VisualDimensionIndicator: React.FC<VisualDimensionIndicatorProps> =
 
   return (
     <div
-      className={`relative inline-flex items-center p-2 rounded-lg border transition-all ${className}`}
+      className={`relative flex items-center w-fit max-w-full p-2 rounded-lg border transition-all ${className}`}
       style={{
         borderColor: `${color}25`,
         backgroundColor: `${color}06`,
       }}
     >
       {/* Visual Graphical Candle Silhouette with Dimension Guides */}
-      <div className="relative flex items-center justify-center pr-3 border-r border-dashed" style={{ borderColor: `${color}30` }}>
+      <div className="relative flex items-center justify-center pr-2.5 sm:pr-3 border-r border-dashed shrink-0" style={{ borderColor: `${color}30` }}>
         <svg
           width="74"
           height="82"

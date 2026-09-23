@@ -210,7 +210,7 @@ export default function CustomerCatalogView() {
 
       {/* Main Content Area */}
       {viewStyle === 'pages' ? (
-        <main className="flex-1 py-6 flex justify-center print:p-0 print:m-0 print:block">
+        <main className="flex-1 py-2 sm:py-6 px-1 sm:px-4 flex justify-center print:p-0 print:m-0 print:block">
           <CatalogPreview catalog={catalog} />
         </main>
       ) : (
