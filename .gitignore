@@ -1,0 +1,84 @@
+# ==========================================
+# Lumina Studio - .gitignore
+# Next.js (App Router), TypeScript & MySQL
+# ==========================================
+
+# Dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
+
+# Next.js build & cache outputs
+/.next/
+/out/
+/build
+/dist
+.turbo
+
+# Environment variables & credentials (CRÍTICO: No subir contraseñas ni accesos a BD)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env*.local
+*.env.local
+
+# Mantener visible la plantilla de ejemplo
+!.env.example
+
+# Logs y depuración
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+*.log
+
+# Archivos de tiempo de ejecución
+*.pid
+*.seed
+*.pid.lock
+
+# Respaldos de base de datos locales
+*.sql
+*.sqlite
+*.sqlite3
+*.db
+data/catalogs/*.json
+!data/catalogs/.gitkeep
+
+# Pruebas y cobertura
+/coverage
+*.lcov
+.nyc_output
+
+# Caché de TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Vercel
+.vercel
+
+# Archivos del sistema operativo (macOS / Windows / Linux)
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Configuraciones de editores e IDEs
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.sublime-workspace
+*.sublime-project
+*.swp
+*.swo
+*~
