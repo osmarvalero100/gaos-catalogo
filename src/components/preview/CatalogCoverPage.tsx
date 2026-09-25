@@ -37,21 +37,21 @@ export const CatalogCoverPage: React.FC<CatalogCoverPageProps> = ({
       {/* Top Header / Brand Logo & Season Badge */}
       <div className="relative z-10 flex flex-col items-center text-center pt-2">
         <div
-          className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mb-2 sm:mb-3 shadow-xs"
+          className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center mb-2.5 sm:mb-3 shadow-sm overflow-hidden border bg-white"
           style={{
-            backgroundColor: `${palette.primary}15`,
-            color: palette.primary,
+            borderColor: `${palette.primary}25`,
+            backgroundColor: '#ffffff',
           }}
         >
-          {catalog.brandLogo ? (
+          {catalog.brandLogo || '/gaos-candles.svg' ? (
             <img
-              src={catalog.brandLogo}
-              alt={catalog.brandName}
+              src={catalog.brandLogo || '/gaos-candles.svg'}
+              alt={catalog.brandName || 'GAOS CANDLES'}
               crossOrigin="anonymous"
-              className="w-7 h-7 sm:w-8 sm:h-8 object-contain"
+              className="w-full h-full object-contain p-1.5 rounded-full"
             />
           ) : (
-            <Flame className="w-5 h-5 sm:w-6 sm:h-6" />
+            <Flame className="w-8 h-8 sm:w-10 sm:h-10" style={{ color: palette.primary }} />
           )}
         </div>
 
@@ -77,9 +77,9 @@ export const CatalogCoverPage: React.FC<CatalogCoverPageProps> = ({
       </div>
 
       {/* Hero Featured Photography */}
-      <div className="relative z-10 my-3 sm:my-4 flex-1 flex flex-col items-center justify-center w-full">
+      <div className="relative z-10 my-2 sm:my-3 flex-1 flex flex-col items-center justify-center w-full min-h-0">
         <div
-          className="w-full max-h-[220px] sm:max-h-[300px] md:max-h-[380px] overflow-hidden rounded-sm shadow-md border"
+          className="w-full max-h-[200px] sm:max-h-[270px] md:max-h-[340px] overflow-hidden rounded-sm shadow-md border"
           style={{ borderColor: `${palette.border}` }}
         >
           <img

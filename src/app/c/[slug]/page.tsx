@@ -140,16 +140,25 @@ export default function CustomerCatalogView() {
       {/* Top Customer Navigation Bar (Hidden in Print) */}
       <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-stone-200 shadow-2xs print:hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <span
-              className="text-[10px] uppercase tracking-widest font-bold block"
-              style={{ color: catalog.theme.palette.primary }}
-            >
-              {catalog.brandName} · {catalog.editionYear}
-            </span>
-            <h1 className="text-sm sm:text-base font-serif font-bold tracking-wide">
-              {catalog.title}
-            </h1>
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-white p-1 border border-stone-200 overflow-hidden shadow-2xs shrink-0 flex items-center justify-center">
+              <img
+                src={catalog.brandLogo || '/gaos-candles.svg'}
+                alt={catalog.brandName || 'GAOS CANDLES'}
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <div>
+              <span
+                className="text-[10px] uppercase tracking-widest font-bold block"
+                style={{ color: catalog.theme.palette.primary }}
+              >
+                {catalog.brandName} · {catalog.editionYear}
+              </span>
+              <h1 className="text-sm sm:text-base font-serif font-bold tracking-wide">
+                {catalog.title}
+              </h1>
+            </div>
           </div>
 
           {/* Action buttons */}
@@ -217,7 +226,19 @@ export default function CustomerCatalogView() {
         /* Mobile-Friendly Cards View */
         <main className="max-w-6xl mx-auto w-full px-4 py-8 flex-1">
           {/* Header Banner */}
-          <div className="text-center max-w-2xl mx-auto mb-8">
+          <div className="text-center max-w-2xl mx-auto mb-8 flex flex-col items-center">
+            {(catalog.brandLogo || '/gaos-candles.svg') && (
+              <div
+                className="w-16 h-16 sm:w-20 sm:h-20 rounded-full flex items-center justify-center mb-3 shadow-xs overflow-hidden border bg-white"
+                style={{ borderColor: `${catalog.theme.palette.primary}25` }}
+              >
+                <img
+                  src={catalog.brandLogo || '/gaos-candles.svg'}
+                  alt={catalog.brandName || 'GAOS CANDLES'}
+                  className="w-full h-full object-contain p-1 rounded-full"
+                />
+              </div>
+            )}
             <span
               className="text-xs uppercase tracking-widest font-bold block mb-1"
               style={{ color: catalog.theme.palette.secondary }}

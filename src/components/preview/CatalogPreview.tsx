@@ -161,7 +161,7 @@ export const CatalogPreview: React.FC<CatalogPreviewProps> = ({
                   sectionTitle={
                     index === 0
                       ? 'Colección Destacada'
-                      : `Velas & Aromas (${index + 1})`
+                      : 'Velas & Aromas'
                   }
                   isPrintMode={isPrintMode}
                 />

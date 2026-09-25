@@ -64,8 +64,16 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-3">
         {/* Brand & App Name */}
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-emerald-700 flex items-center justify-center text-white shadow-xs">
-            <Flame className="w-5 h-5 text-amber-300" />
+          <div className="w-8 h-8 rounded-lg bg-white p-0.5 flex items-center justify-center shadow-xs overflow-hidden border border-stone-700">
+            {catalog.brandLogo || '/gaos-candles.svg' ? (
+              <img
+                src={catalog.brandLogo || '/gaos-candles.svg'}
+                alt={catalog.brandName || 'GAOS CANDLES'}
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <Flame className="w-5 h-5 text-amber-500" />
+            )}
           </div>
           <div className="hidden sm:block">
             <div className="flex items-center gap-1.5">

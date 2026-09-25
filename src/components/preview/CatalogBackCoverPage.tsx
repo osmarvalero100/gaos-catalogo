@@ -35,7 +35,20 @@ export const CatalogBackCoverPage: React.FC<CatalogBackCoverPageProps> = ({
       />
 
       {/* Top Header */}
-      <div className="relative z-10 text-center pt-2 sm:pt-4">
+      <div className="relative z-10 text-center pt-2 sm:pt-4 flex flex-col items-center">
+        {(catalog.brandLogo || '/gaos-candles.svg') && (
+          <div
+            className="w-14 h-14 sm:w-18 sm:h-18 md:w-20 md:h-20 rounded-full flex items-center justify-center mb-2.5 shadow-sm overflow-hidden border bg-white"
+            style={{ borderColor: `${palette.primary}25` }}
+          >
+            <img
+              src={catalog.brandLogo || '/gaos-candles.svg'}
+              alt={catalog.brandName || 'GAOS CANDLES'}
+              crossOrigin="anonymous"
+              className="w-full h-full object-contain p-1 rounded-full"
+            />
+          </div>
+        )}
         <span
           className="text-xs font-semibold tracking-[0.25em] uppercase block mb-1"
           style={{ color: palette.secondary }}

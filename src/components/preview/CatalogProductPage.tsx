@@ -49,19 +49,34 @@ export const CatalogProductPage: React.FC<CatalogProductPageProps> = ({
         className="relative z-10 pb-3 md:pb-4 border-b flex items-center justify-between"
         style={{ borderColor: palette.border }}
       >
-        <div>
-          <span
-            className="text-[10px] md:text-xs font-semibold tracking-[0.2em] uppercase block"
-            style={{ color: palette.secondary }}
-          >
-            {catalog.brandName} · {catalog.seasonTag}
-          </span>
-          <h2
-            className="font-serif text-lg sm:text-xl md:text-2xl font-normal uppercase tracking-wide mt-0.5"
-            style={{ color: palette.primary }}
-          >
-            {sectionTitle}
-          </h2>
+        <div className="flex items-center gap-3">
+          {(catalog.brandLogo || '/gaos-candles.svg') && (
+            <div
+              className="w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center overflow-hidden border bg-white shadow-xs shrink-0"
+              style={{ borderColor: `${palette.primary}25` }}
+            >
+              <img
+                src={catalog.brandLogo || '/gaos-candles.svg'}
+                alt={catalog.brandName || 'GAOS CANDLES'}
+                crossOrigin="anonymous"
+                className="w-full h-full object-contain p-0.5 rounded-full"
+              />
+            </div>
+          )}
+          <div>
+            <span
+              className="text-[10px] md:text-xs font-semibold tracking-[0.2em] uppercase block"
+              style={{ color: palette.secondary }}
+            >
+              {catalog.brandName} · {catalog.seasonTag}
+            </span>
+            <h2
+              className="font-serif text-lg sm:text-xl md:text-2xl font-normal uppercase tracking-wide mt-0.5"
+              style={{ color: palette.primary }}
+            >
+              {sectionTitle}
+            </h2>
+          </div>
         </div>
         <div className="text-right">
           <span className="text-[11px] font-mono opacity-60">

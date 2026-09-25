@@ -27,6 +27,22 @@ export const BrandContactEditor: React.FC<BrandContactEditorProps> = ({
     reader.readAsDataURL(file);
   };
 
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        onChange({
+          ...catalog,
+          brandLogo: event.target.result as string,
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <div className="space-y-6">
       {/* Catalog Title & Subtitle */}
@@ -180,6 +196,54 @@ export const BrandContactEditor: React.FC<BrandContactEditorProps> = ({
                 onChange={(e) => onChange({ ...catalog, coverImage: e.target.value })}
                 placeholder="https://images.unsplash.com/..."
                 className="w-full px-3 py-1.5 text-xs border rounded-md focus:ring-1 focus:ring-emerald-600 focus:outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Brand Logo */}
+        <div>
+          <label className="block text-xs font-semibold text-stone-600 mb-1 flex items-center justify-between">
+            <span>Logo de la Marca / Taller</span>
+            <span className="text-[10px] text-stone-400 font-mono">
+              SVG, PNG o JPG
+            </span>
+          </label>
+          <div className="flex items-center gap-4">
+            <div className="w-20 h-20 rounded-full overflow-hidden border border-stone-200 bg-white flex-shrink-0 flex items-center justify-center p-1.5 shadow-2xs">
+              <img
+                src={catalog.brandLogo || '/gaos-candles.svg'}
+                alt="Logo de Marca"
+                className="w-full h-full object-contain"
+              />
+            </div>
+            <div className="flex-1 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <label className="inline-flex items-center gap-2 px-3 py-1.5 border border-stone-300 rounded-lg text-xs font-medium cursor-pointer hover:bg-stone-50 shadow-2xs">
+                  <Upload className="w-3.5 h-3.5 text-stone-500" />
+                  <span>Subir Nuevo Logo</span>
+                  <input
+                    type="file"
+                    accept="image/*,.svg"
+                    onChange={handleLogoUpload}
+                    className="hidden"
+                  />
+                </label>
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...catalog, brandLogo: '/gaos-candles.svg' })}
+                  className="px-2.5 py-1.5 border border-stone-200 rounded-lg text-[11px] font-medium text-stone-600 hover:text-stone-900 hover:bg-stone-100 transition-colors"
+                  title="Restablecer al logo predeterminado de GAOS CANDLES"
+                >
+                  Restablecer por Defecto
+                </button>
+              </div>
+              <input
+                type="text"
+                value={catalog.brandLogo || ''}
+                onChange={(e) => onChange({ ...catalog, brandLogo: e.target.value })}
+                placeholder="/gaos-candles.svg o URL externa"
+                className="w-full px-3 py-1.5 text-xs border rounded-md focus:ring-1 focus:ring-emerald-600 focus:outline-none font-mono"
               />
             </div>
           </div>
