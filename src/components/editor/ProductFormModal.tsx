@@ -191,12 +191,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   if (!isOpen || !mounted) return null;
 
   return createPortal(
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs overflow-y-auto"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs overflow-y-auto">
       <div
         className="relative w-full max-w-3xl max-h-[92vh] flex flex-col bg-white rounded-xl shadow-2xl overflow-hidden border border-stone-200 animate-in fade-in zoom-in-95 duration-200 z-[10000]"
         onClick={(e) => e.stopPropagation()}
