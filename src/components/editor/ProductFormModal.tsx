@@ -69,7 +69,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           includes: ['Caja de regalo', 'Tarjeta dedicatoria'],
           image: SAMPLE_GALLERY_IMAGES[0].url,
           burnTimeHours: 40,
-          waxType: 'Cera de Soja 100% Ecológica',
+          waxType: 'Cera de Soya 100% Ecológica',
           isSeasonalSpecial: true,
         }
   );
@@ -98,7 +98,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         includes: ['Caja de regalo', 'Tarjeta dedicatoria'],
         image: SAMPLE_GALLERY_IMAGES[0].url,
         burnTimeHours: 40,
-        waxType: 'Cera de Soja 100% Ecológica',
+        waxType: 'Cera de Soya 100% Ecológica',
         isSeasonalSpecial: true,
       });
     }
@@ -636,7 +636,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 type="text"
                 value={formData.waxType || ''}
                 onChange={(e) => setFormData({ ...formData, waxType: e.target.value })}
-                placeholder="Cera de Soja 100%"
+                placeholder="Cera de Soya 100%"
                 className="w-full px-3 py-2 text-xs border rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none"
               />
             </div>

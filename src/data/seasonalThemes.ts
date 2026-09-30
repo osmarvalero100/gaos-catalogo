@@ -340,7 +340,7 @@ export const SEASONAL_PRESETS: Record<SeasonKey, SeasonalPreset> = {
     category: 'estilo',
     description: 'Estética nórdica limpia como revista de diseño, inspirada en materias primas naturales.',
     defaultTitle: 'GAOS BOTÁNICA',
-    defaultSubtitle: 'Velas de Cera de Soja & Aceites Botánicos',
+    defaultSubtitle: 'Velas de Cera de Soya & Aceites Botánicos',
     defaultCoverImage: 'https://images.unsplash.com/photo-1570823635306-250abb06d4b3?auto=format&fit=crop&w=1200&q=80',
     theme: {
       season: 'minimalista',
