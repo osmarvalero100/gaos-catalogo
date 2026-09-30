@@ -333,6 +333,28 @@ export const ThemeCustomizer: React.FC<ThemeCustomizerProps> = ({
               className="w-4 h-4 text-emerald-700 rounded focus:ring-emerald-500"
             />
           </label>
+
+          <label className="flex items-center justify-between p-3 bg-white border rounded-lg cursor-pointer hover:bg-stone-50">
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-stone-800">
+                Mostrar Sección "Incluye"
+              </span>
+              <span className="text-[11px] text-stone-500">
+                Muestra los accesorios y empaques incluidos con la vela en el catálogo.
+              </span>
+            </div>
+            <input
+              type="checkbox"
+              checked={theme.showIncludes ?? true}
+              onChange={(e) =>
+                onChange({
+                  ...catalog,
+                  theme: { ...theme, showIncludes: e.target.checked },
+                })
+              }
+              className="w-4 h-4 text-emerald-700 rounded focus:ring-emerald-500"
+            />
+          </label>
         </div>
       </div>
 

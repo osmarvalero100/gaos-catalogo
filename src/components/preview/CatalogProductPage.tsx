@@ -3,6 +3,7 @@ import { Catalog, Product } from '../../types/catalog';
 import { VisualDimensionIndicator } from './VisualDimensionIndicator';
 import { FragranceBadgeList } from './FragranceBadgeList';
 import { ColorSwatchList } from './ColorSwatchList';
+import { IncludesBadgeList } from './IncludesBadgeList';
 import { MessageCircle, Clock, Sparkles } from 'lucide-react';
 
 interface CatalogProductPageProps {
@@ -187,8 +188,18 @@ export const CatalogProductPage: React.FC<CatalogProductPageProps> = ({
 
             {/* Available Colors Swatches */}
             {theme.showColorSwatches && product.colors && product.colors.length > 0 && (
-              <div className="mb-3">
+              <div className="mb-2.5">
                 <ColorSwatchList colors={product.colors} />
+              </div>
+            )}
+
+            {/* Included Items Badges */}
+            {(theme.showIncludes ?? true) && product.includes && product.includes.length > 0 && (
+              <div className="mb-3">
+                <IncludesBadgeList
+                  includes={product.includes}
+                  color={palette.primary}
+                />
               </div>
             )}
 

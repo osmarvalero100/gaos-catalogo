@@ -8,6 +8,7 @@ import { CatalogPreview } from '../../../components/preview/CatalogPreview';
 import { VisualDimensionIndicator } from '../../../components/preview/VisualDimensionIndicator';
 import { FragranceBadgeList } from '../../../components/preview/FragranceBadgeList';
 import { ColorSwatchList } from '../../../components/preview/ColorSwatchList';
+import { IncludesBadgeList } from '../../../components/preview/IncludesBadgeList';
 import { PdfExportModal } from '../../../components/shared/PdfExportModal';
 import { MessageCircle, FileDown, Search, Grid, BookOpen, Clock, Sparkles } from 'lucide-react';
 
@@ -98,7 +99,8 @@ export default function CustomerCatalogView() {
     return (
       p.name.toLowerCase().includes(q) ||
       p.description.toLowerCase().includes(q) ||
-      p.fragrances.some((f) => f.toLowerCase().includes(q))
+      (p.fragrances && p.fragrances.some((f) => f.toLowerCase().includes(q))) ||
+      (p.includes && p.includes.some((inc) => inc.toLowerCase().includes(q)))
     );
   });
 
@@ -341,8 +343,18 @@ export default function CustomerCatalogView() {
 
                 {/* Colors */}
                 {candle.colors && candle.colors.length > 0 && (
-                  <div className="mb-3">
+                  <div className="mb-2.5">
                     <ColorSwatchList colors={candle.colors} />
+                  </div>
+                )}
+
+                {/* Includes */}
+                {(catalog.theme.showIncludes ?? true) && candle.includes && candle.includes.length > 0 && (
+                  <div className="mb-3">
+                    <IncludesBadgeList
+                      includes={candle.includes}
+                      color={catalog.theme.palette.primary}
+                    />
                   </div>
                 )}
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Product, CandleColor } from '../../types/catalog';
 import { VisualDimensionIndicator } from '../preview/VisualDimensionIndicator';
-import { X, Upload, Plus, Trash2, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { X, Upload, Plus, Trash2, Sparkles, Image as ImageIcon, PackageCheck, Check } from 'lucide-react';
 
 interface ProductFormModalProps {
   product?: Product | null;
@@ -11,7 +11,17 @@ interface ProductFormModalProps {
   onSave: (product: Product) => void;
   currencySymbol?: string;
   suggestedFragrances?: string[];
+  suggestedIncludes?: string[];
 }
+
+const DEFAULT_SUGGESTED_INCLUDES = [
+  'Caja de regalo',
+  'Tarjeta dedicatoria',
+  'Fósforos artesanales',
+  'Tapa de madera',
+  'Bolsa de lienzo',
+  'Instrucciones de cuidado',
+];
 
 const SAMPLE_GALLERY_IMAGES = [
   { label: 'Vela Pino & Navidad', url: 'https://images.unsplash.com/photo-1543257580-7269da773bf5?auto=format&fit=crop&w=800&q=80' },
@@ -31,6 +41,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   onSave,
   currencySymbol = '$',
   suggestedFragrances = [],
+  suggestedIncludes = [],
 }) => {
   const [mounted, setMounted] = useState(false);
 
@@ -39,30 +50,36 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   }, []);
 
   const [formData, setFormData] = useState<Product>(
-    product || {
-      id: `candle-${Date.now()}`,
-      name: '',
-      sku: `VEL-${Math.floor(100 + Math.random() * 900)}`,
-      price: 35000,
-      currency: currencySymbol,
-      description: '',
-      heightCm: 10,
-      widthCm: 7,
-      fragrances: ['Vainilla', 'Canela'],
-      colors: [
-        { name: 'Blanco Marfil', hex: '#FAF9F6' },
-        { name: 'Cera Natural', hex: '#EBE5D8' },
-      ],
-      image: SAMPLE_GALLERY_IMAGES[0].url,
-      burnTimeHours: 40,
-      waxType: 'Cera de Soja 100% Ecológica',
-      isSeasonalSpecial: true,
-    }
+    product
+      ? { ...product, includes: product.includes || [] }
+      : {
+          id: `candle-${Date.now()}`,
+          name: '',
+          sku: `VEL-${Math.floor(100 + Math.random() * 900)}`,
+          price: 35000,
+          currency: currencySymbol,
+          description: '',
+          heightCm: 10,
+          widthCm: 7,
+          fragrances: ['Vainilla', 'Canela'],
+          colors: [
+            { name: 'Blanco Marfil', hex: '#FAF9F6' },
+            { name: 'Cera Natural', hex: '#EBE5D8' },
+          ],
+          includes: ['Caja de regalo', 'Tarjeta dedicatoria'],
+          image: SAMPLE_GALLERY_IMAGES[0].url,
+          burnTimeHours: 40,
+          waxType: 'Cera de Soja 100% Ecológica',
+          isSeasonalSpecial: true,
+        }
   );
 
   useEffect(() => {
     if (product) {
-      setFormData(product);
+      setFormData({
+        ...product,
+        includes: product.includes || [],
+      });
     } else {
       setFormData({
         id: `candle-${Date.now()}`,
@@ -78,6 +95,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           { name: 'Blanco Marfil', hex: '#FAF9F6' },
           { name: 'Cera Natural', hex: '#EBE5D8' },
         ],
+        includes: ['Caja de regalo', 'Tarjeta dedicatoria'],
         image: SAMPLE_GALLERY_IMAGES[0].url,
         burnTimeHours: 40,
         waxType: 'Cera de Soja 100% Ecológica',
@@ -89,6 +107,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const [newFragrance, setNewFragrance] = useState('');
   const [newColorName, setNewColorName] = useState('');
   const [newColorHex, setNewColorHex] = useState('#2D4A3E');
+  const [newIncludeItem, setNewIncludeItem] = useState('');
   const [showGallery, setShowGallery] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -142,6 +161,26 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }));
   };
 
+  const handleAddInclude = (itemToAdd?: string) => {
+    const item = (itemToAdd || newIncludeItem).trim();
+    if (!item) return;
+    const current = formData.includes || [];
+    if (!current.includes(item)) {
+      setFormData((prev) => ({
+        ...prev,
+        includes: [...(prev.includes || []), item],
+      }));
+    }
+    if (!itemToAdd) setNewIncludeItem('');
+  };
+
+  const handleRemoveInclude = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      includes: (prev.includes || []).filter((_, i) => i !== index),
+    }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
@@ -169,7 +208,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               {product ? 'Editar Vela' : 'Nueva Vela Artesanal'}
             </h2>
             <p className="text-xs text-stone-500">
-              Configura nombre, medidas visuales, precio, fragancias y colores disponibles.
+              Configura nombre, medidas visuales, precio, fragancias, colores y qué incluye.
             </p>
           </div>
           <button
@@ -495,6 +534,82 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
                 <Plus className="w-3.5 h-3.5" /> Añadir Color
               </button>
             </div>
+          </div>
+
+          {/* Section: Incluye */}
+          <div>
+            <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1 flex items-center gap-1.5">
+              <PackageCheck className="w-3.5 h-3.5 text-emerald-800" />
+              Incluye
+            </label>
+            <p className="text-[11px] text-stone-500 mb-2">
+              Elementos y accesorios incluidos con este producto (ej. empaque, cerillos, tarjetas).
+            </p>
+
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {(formData.includes || []).map((item, idx) => (
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-900 border border-amber-200 shadow-2xs"
+                >
+                  <Check className="w-3 h-3 text-amber-600" />
+                  {item}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveInclude(idx)}
+                    className="text-amber-700 hover:text-rose-600 ml-0.5 transition-colors"
+                    title="Eliminar elemento"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              ))}
+              {(!formData.includes || formData.includes.length === 0) && (
+                <span className="text-xs text-stone-400 italic py-0.5">
+                  No hay elementos agregados en "Incluye".
+                </span>
+              )}
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={newIncludeItem}
+                onChange={(e) => setNewIncludeItem(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddInclude();
+                  }
+                }}
+                placeholder="Agregar elemento (ej. Caja de regalo, Fósforos artesanales, Tarjeta dedicatoria...)"
+                className="flex-1 px-3 py-1.5 text-xs border rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+              />
+              <button
+                type="button"
+                onClick={() => handleAddInclude()}
+                className="px-3 py-1.5 bg-stone-800 text-white rounded-lg text-xs font-medium hover:bg-black transition-colors flex items-center gap-1"
+              >
+                <Plus className="w-3.5 h-3.5" /> Agregar
+              </button>
+            </div>
+
+            {/* Quick Suggestions for Incluye */}
+            {(suggestedIncludes.length > 0 ? suggestedIncludes : DEFAULT_SUGGESTED_INCLUDES).length > 0 && (
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] text-stone-400">Sugerencias:</span>
+                {(suggestedIncludes.length > 0 ? suggestedIncludes : DEFAULT_SUGGESTED_INCLUDES).map((sug, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => handleAddInclude(sug)}
+                    className="text-[10px] px-2 py-0.5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-600 transition-colors"
+                  >
+                    + {sug}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Additional details: Duration, wax type & Seasonal Badge */}

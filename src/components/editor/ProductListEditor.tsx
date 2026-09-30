@@ -65,6 +65,8 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
 
   const suggestedFragrances =
     SEASONAL_PRESETS[catalog.theme.season]?.sampleFragrances || [];
+  const suggestedIncludes =
+    SEASONAL_PRESETS[catalog.theme.season]?.sampleIncludes || [];
 
   return (
     <div className="space-y-4">
@@ -169,6 +171,11 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
                         {prod.fragrances.join(', ')}
                       </span>
                     )}
+                    {prod.includes && prod.includes.length > 0 && (
+                      <span className="truncate max-w-[150px] text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200" title={`Incluye: ${prod.includes.join(', ')}`}>
+                        Incluye: {prod.includes.join(', ')}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -224,6 +231,7 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
         onSave={handleSave}
         currencySymbol={catalog.theme.currencySymbol}
         suggestedFragrances={suggestedFragrances}
+        suggestedIncludes={suggestedIncludes}
       />
     </div>
   );

@@ -12,6 +12,7 @@ export interface SeasonalPreset {
   theme: ThemeConfig;
   sampleFragrances: string[];
   sampleColors: { name: string; hex: string }[];
+  sampleIncludes?: string[];
 }
 
 export const SEASONAL_PRESETS: Record<SeasonKey, SeasonalPreset> = {
@@ -42,6 +43,7 @@ export const SEASONAL_PRESETS: Record<SeasonKey, SeasonalPreset> = {
       showDimensionsVisual: true,
       showFragrances: true,
       showColorSwatches: true,
+      showIncludes: true,
       currencySymbol: '$',
     },
     sampleFragrances: [
@@ -58,6 +60,14 @@ export const SEASONAL_PRESETS: Record<SeasonKey, SeasonalPreset> = {
       { name: 'Oro Champán', hex: '#C29B38' },
       { name: 'Blanco Nieve', hex: '#FAF9F6' },
       { name: 'Terracota Cálida', hex: '#C46845' },
+    ],
+    sampleIncludes: [
+      'Caja de regalo festiva',
+      'Tarjeta dedicatoria navideña',
+      'Fósforos largos artesanales',
+      'Lazo de terciopelo',
+      'Tapa de madera grabada',
+      'Instrucciones de cuidado y encendido',
     ],
   },
   amor_amistad: {

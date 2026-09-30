@@ -25,6 +25,7 @@ export interface Product {
   widthCm: number;
   fragrances: string[];
   colors: CandleColor[];
+  includes?: string[];
   image: string;
   burnTimeHours?: number;
   waxType?: string;
@@ -51,6 +52,7 @@ export interface ThemeConfig {
   showDimensionsVisual: boolean;
   showFragrances: boolean;
   showColorSwatches: boolean;
+  showIncludes?: boolean;
   currencySymbol: string;
 }
 

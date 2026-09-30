@@ -85,6 +85,7 @@ export async function initDatabase(): Promise<void> {
         width_cm DECIMAL(6, 2) DEFAULT 0.00,
         fragrances JSON,
         colors JSON,
+        includes JSON,
         image LONGTEXT,
         burn_time_hours INT DEFAULT NULL,
         wax_type VARCHAR(100) DEFAULT '',
@@ -97,6 +98,18 @@ export async function initDatabase(): Promise<void> {
           REFERENCES catalogs (id) ON DELETE CASCADE ON UPDATE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    // Ensure includes column exists in existing products table
+    try {
+      const [cols] = await pool.query<mysql.RowDataPacket[]>(
+        "SHOW COLUMNS FROM products LIKE 'includes'"
+      );
+      if (cols.length === 0) {
+        await pool.query('ALTER TABLE products ADD COLUMN includes JSON AFTER colors');
+      }
+    } catch (migErr) {
+      console.warn('Could not check or alter includes column:', migErr);
+    }
 
     global.__dbInitialized = true;
 
@@ -206,6 +219,7 @@ export async function getCatalogByIdOrSlug(idOrSlug: string): Promise<Catalog | 
     widthCm: Number(p.width_cm || 0),
     fragrances: typeof p.fragrances === 'string' ? JSON.parse(p.fragrances) : p.fragrances || [],
     colors: typeof p.colors === 'string' ? JSON.parse(p.colors) : p.colors || [],
+    includes: typeof p.includes === 'string' ? JSON.parse(p.includes) : p.includes || [],
     image: p.image || '',
     burnTimeHours: p.burnTimeHours != null ? Number(p.burn_time_hours) : (p.burn_time_hours != null ? Number(p.burn_time_hours) : undefined),
     waxType: p.wax_type || undefined,
@@ -301,14 +315,15 @@ export async function saveCatalogToDb(catalog: Catalog): Promise<Catalog> {
         const productId = p.id || `prod_${Date.now()}_${i}`;
         const fragrancesJson = JSON.stringify(p.fragrances || []);
         const colorsJson = JSON.stringify(p.colors || []);
+        const includesJson = JSON.stringify(p.includes || []);
 
         await connection.query(
           `
           INSERT INTO products (
             id, catalog_id, name, sku, price, currency, description,
-            height_cm, width_cm, fragrances, colors, image,
+            height_cm, width_cm, fragrances, colors, includes, image,
             burn_time_hours, wax_type, is_seasonal_special, sort_order
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
             productId,
@@ -322,6 +337,7 @@ export async function saveCatalogToDb(catalog: Catalog): Promise<Catalog> {
             p.widthCm || 0,
             fragrancesJson,
             colorsJson,
+            includesJson,
             p.image || '',
             p.burnTimeHours ?? null,
             p.waxType || '',
