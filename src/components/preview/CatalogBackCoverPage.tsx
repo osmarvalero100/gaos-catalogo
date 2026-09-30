@@ -1,20 +1,33 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Catalog } from '../../types/catalog';
-import { MessageCircle, AtSign, MapPin, HeartHandshake, Sparkles, Globe, Music2, Pin, Share2 } from 'lucide-react';
+import { MessageCircle, AtSign, MapPin, HeartHandshake, Sparkles, Globe, Music2, Pin, Share2, Edit2, Check } from 'lucide-react';
 
 interface CatalogBackCoverPageProps {
   catalog: Catalog;
   pageNumber: number;
   isPrintMode?: boolean;
+  onUpdateFooterText?: (newFooter: string) => void;
 }
 
 export const CatalogBackCoverPage: React.FC<CatalogBackCoverPageProps> = ({
   catalog,
   pageNumber,
   isPrintMode = false,
+  onUpdateFooterText,
 }) => {
   const { theme, contact } = catalog;
   const { palette } = theme;
+
+  const [isEditingFooter, setIsEditingFooter] = useState(false);
+  const defaultFooter = `© ${catalog.editionYear || '2026'} ${catalog.brandName || 'GAOS Candles'} · Hecho con amor artesanal`;
+  const currentFooter = catalog.footerText ?? defaultFooter;
+  const [tempFooter, setTempFooter] = useState(currentFooter);
+
+  useEffect(() => {
+    if (!isEditingFooter) {
+      setTempFooter(currentFooter);
+    }
+  }, [currentFooter, isEditingFooter]);
 
   const phoneOnly = contact.whatsapp?.replace(/[^0-9]/g, '') || '';
 
@@ -322,7 +335,76 @@ export const CatalogBackCoverPage: React.FC<CatalogBackCoverPageProps> = ({
         className="relative z-10 pt-3 sm:pt-4 border-t text-center text-[10px] md:text-xs tracking-wider uppercase opacity-70"
         style={{ borderColor: palette.border }}
       >
-        <p>© {catalog.editionYear} {catalog.brandName} · Hecho con amor artesanal</p>
+        {isEditingFooter && onUpdateFooterText && !isPrintMode ? (
+          <div className="flex items-center justify-center gap-1.5 my-1">
+            <input
+              type="text"
+              value={tempFooter}
+              autoFocus
+              onChange={(e) => setTempFooter(e.target.value)}
+              onBlur={() => {
+                setIsEditingFooter(false);
+                if (tempFooter.trim() && tempFooter !== currentFooter) {
+                  onUpdateFooterText(tempFooter.trim());
+                }
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setIsEditingFooter(false);
+                  if (tempFooter.trim() && tempFooter !== currentFooter) {
+                    onUpdateFooterText(tempFooter.trim());
+                  }
+                } else if (e.key === 'Escape') {
+                  setIsEditingFooter(false);
+                  setTempFooter(currentFooter);
+                }
+              }}
+              className="text-[10px] md:text-xs tracking-wider uppercase px-2 py-0.5 rounded border border-emerald-600 bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs max-w-md w-full text-center"
+            />
+            <button
+              type="button"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                setIsEditingFooter(false);
+                if (tempFooter.trim() && tempFooter !== currentFooter) {
+                  onUpdateFooterText(tempFooter.trim());
+                }
+              }}
+              className="p-1 rounded bg-emerald-700 text-white hover:bg-emerald-800"
+              title="Guardar pie de página"
+            >
+              <Check className="w-3.5 h-3.5" />
+            </button>
+          </div>
+        ) : (
+          <div className="group relative inline-flex items-center justify-center gap-1.5">
+            <p
+              className={onUpdateFooterText && !isPrintMode ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}
+              onClick={() => {
+                if (onUpdateFooterText && !isPrintMode) {
+                  setTempFooter(currentFooter);
+                  setIsEditingFooter(true);
+                }
+              }}
+              title={onUpdateFooterText && !isPrintMode ? 'Clic para editar pie de página' : undefined}
+            >
+              {currentFooter}
+            </p>
+            {onUpdateFooterText && !isPrintMode && (
+              <button
+                type="button"
+                onClick={() => {
+                  setTempFooter(currentFooter);
+                  setIsEditingFooter(true);
+                }}
+                className="opacity-0 group-hover:opacity-100 p-0.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded transition-all print:hidden"
+                title="Editar pie de página"
+              >
+                <Edit2 className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+        )}
         <p className="mt-1">Página {pageNumber}</p>
       </div>
     </div>

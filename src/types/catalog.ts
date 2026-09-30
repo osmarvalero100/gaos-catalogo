@@ -87,6 +87,7 @@ export interface Catalog {
   introText: string;
   featuredSectionTitle?: string;
   regularSectionTitle?: string;
+  footerText?: string;
   products: Product[];
   theme: ThemeConfig;
   contact: ContactInfo;

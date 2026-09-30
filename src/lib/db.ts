@@ -93,6 +93,7 @@ export async function initDatabase(): Promise<void> {
         user_id INT NULL,
         featured_section_title VARCHAR(255) DEFAULT 'Colección Destacada',
         regular_section_title VARCHAR(255) DEFAULT 'Velas & Aromas',
+        footer_text VARCHAR(255) NULL,
         theme_config JSON NOT NULL,
         contact_info JSON NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -129,6 +130,20 @@ export async function initDatabase(): Promise<void> {
       }
     } catch (migErr) {
       console.warn('Could not check or alter section titles columns in catalogs:', migErr);
+    }
+
+    // Ensure footer_text column exists in existing catalogs table
+    try {
+      const [cols] = await pool.query<mysql.RowDataPacket[]>(
+        "SHOW COLUMNS FROM catalogs LIKE 'footer_text'"
+      );
+      if (cols.length === 0) {
+        await pool.query(
+          "ALTER TABLE catalogs ADD COLUMN footer_text VARCHAR(255) NULL AFTER regular_section_title"
+        );
+      }
+    } catch (migErr) {
+      console.warn('Could not check or alter footer_text column in catalogs:', migErr);
     }
 
     // 4. Create products table
@@ -337,6 +352,7 @@ export async function getCatalogByIdOrSlug(idOrSlug: string): Promise<Catalog | 
     introText: c.intro_text || '',
     featuredSectionTitle: c.featured_section_title || 'Colección Destacada',
     regularSectionTitle: c.regular_section_title || 'Velas & Aromas',
+    footerText: c.footer_text || undefined,
     products,
     theme,
     contact,
@@ -388,9 +404,9 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
         id, slug, title, subtitle, season_tag, edition_year,
         brand_name, brand_logo, cover_image, intro_text,
         user_id,
-        featured_section_title, regular_section_title,
+        featured_section_title, regular_section_title, footer_text,
         theme_config, contact_info, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
       ON DUPLICATE KEY UPDATE
         slug = VALUES(slug),
         title = VALUES(title),
@@ -404,6 +420,7 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
         user_id = COALESCE(catalogs.user_id, VALUES(user_id)),
         featured_section_title = VALUES(featured_section_title),
         regular_section_title = VALUES(regular_section_title),
+        footer_text = VALUES(footer_text),
         theme_config = VALUES(theme_config),
         contact_info = VALUES(contact_info),
         updated_at = NOW()
@@ -422,6 +439,7 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
         effectiveUserId,
         catalog.featuredSectionTitle || 'Colección Destacada',
         catalog.regularSectionTitle || 'Velas & Aromas',
+        catalog.footerText !== undefined ? catalog.footerText : null,
         themeJson,
         contactJson,
       ]

@@ -551,6 +551,36 @@ export const BrandContactEditor: React.FC<BrandContactEditorProps> = ({
             className="w-full px-3 py-2 text-xs border rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none"
           />
         </div>
+
+        <div>
+          <label className="block text-xs font-semibold text-stone-600 mb-1 flex items-center justify-between">
+            <span>Texto de Pie de Página / Copyright (Contraportada)</span>
+            {catalog.footerText && (
+              <button
+                type="button"
+                onClick={() => onChange({ ...catalog, footerText: undefined })}
+                className="text-[10px] text-stone-400 hover:text-stone-600 underline"
+              >
+                Restablecer predeterminado
+              </button>
+            )}
+          </label>
+          <input
+            type="text"
+            value={catalog.footerText ?? `© ${catalog.editionYear || '2026'} ${catalog.brandName || 'GAOS Candles'} · Hecho con amor artesanal`}
+            onChange={(e) =>
+              onChange({
+                ...catalog,
+                footerText: e.target.value,
+              })
+            }
+            placeholder={`© ${catalog.editionYear || '2026'} ${catalog.brandName || 'GAOS Candles'} · Hecho con amor artesanal`}
+            className="w-full px-3 py-2 text-xs border rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+          />
+          <p className="text-[11px] text-stone-400 mt-1">
+            Texto personalizado que se muestra al final de la contraportada del catálogo.
+          </p>
+        </div>
       </div>
     </div>
   );

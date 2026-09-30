@@ -39,6 +39,14 @@ export const CatalogPreview: React.FC<CatalogPreviewProps> = ({
     }
   };
 
+  const handleUpdateFooterText = (newFooter: string) => {
+    if (!onChange) return;
+    onChange({
+      ...catalog,
+      footerText: newFooter,
+    });
+  };
+
   const totalPages = 1 + productChunks.length + 1; // Cover + Product Pages + Back Cover
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [viewMode, setViewMode] = useState<'all' | 'single'>('all');
@@ -202,6 +210,7 @@ export const CatalogPreview: React.FC<CatalogPreviewProps> = ({
               catalog={catalog}
               pageNumber={totalPages}
               isPrintMode={isPrintMode}
+              onUpdateFooterText={onChange ? handleUpdateFooterText : undefined}
             />
           </div>
         </div>

@@ -411,6 +411,7 @@ export const INITIAL_CATALOG: Catalog = {
   introText: 'Cada una de nuestras velas está vertida a mano en pequeños lotes con cera de soya 100% vegetal, mechas de madera natural que emiten un relajante crepitar de chimenea, y fragancias prémium libres de ftalatos. Diseñadas para vestir tus espacios con calidez, luz y memoria olfativa.',
   featuredSectionTitle: 'Colección Destacada',
   regularSectionTitle: 'Velas & Aromas',
+  footerText: '© 2026 GAOS Candles · Hecho con amor artesanal',
   products: SAMPLE_CANDLES.navidad,
   theme: SEASONAL_PRESETS.navidad.theme,
   contact: {
