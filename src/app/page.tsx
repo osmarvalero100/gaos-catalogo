@@ -10,7 +10,7 @@ import { CatalogPreview } from '../components/preview/CatalogPreview';
 import { PdfExportModal } from '../components/shared/PdfExportModal';
 import { ShareUrlModal } from '../components/shared/ShareUrlModal';
 import { CatalogManagerModal } from '../components/shared/CatalogManagerModal';
-import { SlidersHorizontal, Eye, Loader2 } from 'lucide-react';
+import { SlidersHorizontal, Eye, Loader2, Clock, AlertTriangle, X, Save } from 'lucide-react';
 
 interface AuthUserData {
   id: number;
@@ -24,6 +24,10 @@ export default function CatalogStudioPage() {
 
   const [catalog, setCatalog] = useState<Catalog>(INITIAL_CATALOG);
   const [isSaved, setIsSaved] = useState<boolean>(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
+  const [lastModifiedTime, setLastModifiedTime] = useState<number | null>(null);
+  const [showInactivitySaveAlert, setShowInactivitySaveAlert] = useState<boolean>(false);
+
   const [saveMessage, setSaveMessage] = useState<string>('Guardado en MySQL');
   const [isPdfModalOpen, setIsPdfModalOpen] = useState<boolean>(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
@@ -71,6 +75,8 @@ export default function CatalogStudioPage() {
             if (data && data.id) {
               setCatalog(data);
               saveCatalogToStorage(data);
+              setHasUnsavedChanges(false);
+              setLastModifiedTime(null);
               return;
             }
           }
@@ -87,6 +93,8 @@ export default function CatalogStudioPage() {
           if (data && data.id) {
             setCatalog(data);
             saveCatalogToStorage(data);
+            setHasUnsavedChanges(false);
+            setLastModifiedTime(null);
             const newUrl = `${window.location.pathname}?catalog=${data.slug}`;
             window.history.replaceState(null, '', newUrl);
             return;
@@ -100,18 +108,61 @@ export default function CatalogStudioPage() {
       const stored = getCatalogFromStorage();
       if (stored) {
         setCatalog(stored);
+        setHasUnsavedChanges(false);
+        setLastModifiedTime(null);
       }
     }
 
     verifyAuthAndLoad();
   }, []);
 
+  // Alert before closing tab if there are unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        // Standards-compliant browsers show generic prompt; setting returnValue triggers it
+        e.returnValue = '';
+        return '';
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
+  // Check if user has unsaved changes for more than 10 minutes (600,000 ms)
+  useEffect(() => {
+    if (!hasUnsavedChanges || !lastModifiedTime) {
+      setShowInactivitySaveAlert(false);
+      return;
+    }
+
+    const checkInactivity = () => {
+      const elapsed = Date.now() - lastModifiedTime;
+      if (elapsed >= 10 * 60 * 1000) {
+        setShowInactivitySaveAlert(true);
+      }
+    };
+
+    checkInactivity();
+    const interval = setInterval(checkInactivity, 15000);
+    return () => clearInterval(interval);
+  }, [hasUnsavedChanges, lastModifiedTime]);
+
   const handleCatalogChange = (updated: Catalog) => {
     setCatalog(updated);
     setIsSaved(false);
+    setHasUnsavedChanges(true);
+    setLastModifiedTime((prev) => prev ?? Date.now());
   };
 
   const handleLogout = async () => {
+    if (hasUnsavedChanges) {
+      if (!confirm('Tienes cambios sin guardar. ¿Seguro que deseas cerrar sesión y perderlos?')) {
+        return;
+      }
+    }
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
     } catch (err) {
@@ -136,6 +187,10 @@ export default function CatalogStudioPage() {
         const data = await res.json();
         const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         setSaveMessage(`Guardado en MySQL (${timeStr})`);
+        setHasUnsavedChanges(false);
+        setLastModifiedTime(null);
+        setShowInactivitySaveAlert(false);
+
         if (data.catalog?.slug && data.catalog.slug !== catalog.slug) {
           setCatalog(data.catalog);
         }
@@ -175,8 +230,21 @@ export default function CatalogStudioPage() {
   }, [catalog]);
 
   const handleSelectCatalog = (selected: Catalog) => {
+    if (hasUnsavedChanges) {
+      if (
+        !confirm(
+          'Tienes cambios sin guardar en el catálogo actual. ¿Seguro que deseas cambiar de catálogo y perder los cambios no guardados?'
+        )
+      ) {
+        return;
+      }
+    }
     setCatalog(selected);
     saveCatalogToStorage(selected);
+    setHasUnsavedChanges(false);
+    setLastModifiedTime(null);
+    setShowInactivitySaveAlert(false);
+
     if (typeof window !== 'undefined') {
       const newUrl = `${window.location.pathname}?catalog=${selected.slug}`;
       window.history.pushState(null, '', newUrl);
@@ -199,6 +267,10 @@ export default function CatalogStudioPage() {
   const handleImportJson = (imported: Catalog) => {
     setCatalog(imported);
     saveCatalogToStorage(imported);
+    setHasUnsavedChanges(false);
+    setLastModifiedTime(null);
+    setShowInactivitySaveAlert(false);
+
     fetch('/api/catalog', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -240,6 +312,7 @@ export default function CatalogStudioPage() {
         onOpenCatalogManager={() => setIsCatalogManagerOpen(true)}
         onSave={handleSave}
         isSaved={isSaved}
+        hasUnsavedChanges={hasUnsavedChanges}
         saveMessage={saveMessage}
         onDownloadJson={handleDownloadJson}
         onImportJson={handleImportJson}
@@ -296,6 +369,58 @@ export default function CatalogStudioPage() {
           <CatalogPreview catalog={catalog} onChange={handleCatalogChange} />
         </main>
       </div>
+
+      {/* 10-Minute Inactivity Save Reminder Alert */}
+      {showInactivitySaveAlert && (
+        <div className="fixed bottom-5 right-5 z-50 max-w-md bg-stone-900 text-stone-100 p-4 rounded-2xl shadow-2xl border-2 border-amber-500/80 backdrop-blur-md animate-in slide-in-from-bottom-5">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+              <Clock className="w-5 h-5" />
+            </div>
+            <div className="flex-1 space-y-1">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                <AlertTriangle className="w-3.5 h-3.5" />
+                <span>Llevas más de 10 minutos sin guardar</span>
+              </h4>
+              <p className="text-xs text-stone-300 leading-relaxed">
+                Tienes modificaciones en tu catálogo que aún no se han sincronizado con la base de datos. Guarda tu trabajo para evitar pérdidas accidentales.
+              </p>
+              <div className="flex items-center gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleSave();
+                    setShowInactivitySaveAlert(false);
+                  }}
+                  className="px-3.5 py-1.5 bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs rounded-lg transition-colors flex items-center gap-1.5 shadow-sm cursor-pointer"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>Guardar Ahora</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowInactivitySaveAlert(false);
+                    // Remind again in 5 minutes
+                    setLastModifiedTime(Date.now() - 5 * 60 * 1000);
+                  }}
+                  className="px-2.5 py-1.5 text-stone-400 hover:text-stone-200 text-xs font-medium rounded-lg transition-colors cursor-pointer"
+                >
+                  Recordarme en 5 min
+                </button>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowInactivitySaveAlert(false)}
+              className="p-1 text-stone-400 hover:text-stone-200 rounded-lg transition-colors cursor-pointer"
+              title="Cerrar aviso"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Export to PDF Modal */}
       <PdfExportModal

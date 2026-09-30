@@ -24,6 +24,7 @@ interface HeaderNavbarProps {
   onSave: () => void;
   onOpenCatalogManager: () => void;
   isSaved?: boolean;
+  hasUnsavedChanges?: boolean;
   saveMessage?: string;
   onDownloadJson?: () => void;
   onImportJson?: (catalog: Catalog) => void;
@@ -38,6 +39,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   onSave,
   onOpenCatalogManager,
   isSaved = false,
+  hasUnsavedChanges = false,
   saveMessage,
   onDownloadJson,
   onImportJson,
@@ -131,6 +133,8 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
               isSaved
                 ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700 shadow-xs'
+                : hasUnsavedChanges
+                ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-xs'
                 : 'bg-emerald-700 hover:bg-emerald-600 text-white shadow-xs'
             }`}
           >
@@ -139,7 +143,13 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             ) : (
               <Save className="w-3.5 h-3.5 text-white" />
             )}
-            <span>{isSaved ? saveMessage || 'Guardado en MySQL' : 'Guardar en BD'}</span>
+            <span>
+              {isSaved
+                ? saveMessage || 'Guardado en MySQL'
+                : hasUnsavedChanges
+                ? 'Guardar Cambios ●'
+                : 'Guardar en BD'}
+            </span>
           </button>
 
           {/* Backup Options: Download JSON / Import JSON */}
