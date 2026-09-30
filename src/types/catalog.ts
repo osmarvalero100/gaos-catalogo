@@ -56,10 +56,20 @@ export interface ThemeConfig {
   currencySymbol: string;
 }
 
+export interface CustomSocialLink {
+  id: string;
+  name: string;
+  url: string;
+}
+
 export interface ContactInfo {
   whatsapp: string;
-  instagram: string;
+  instagram?: string;
+  facebook?: string;
+  tiktok?: string;
+  pinterest?: string;
   website?: string;
+  customSocials?: CustomSocialLink[];
   location?: string;
   deliveryNotes?: string;
 }

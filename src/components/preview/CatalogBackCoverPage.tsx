@@ -1,6 +1,6 @@
 import React from 'react';
 import { Catalog } from '../../types/catalog';
-import { MessageCircle, AtSign, MapPin, HeartHandshake, Sparkles } from 'lucide-react';
+import { MessageCircle, AtSign, MapPin, HeartHandshake, Sparkles, Globe, Music2, Pin, Share2 } from 'lucide-react';
 
 interface CatalogBackCoverPageProps {
   catalog: Catalog;
@@ -17,6 +17,26 @@ export const CatalogBackCoverPage: React.FC<CatalogBackCoverPageProps> = ({
   const { palette } = theme;
 
   const phoneOnly = contact.whatsapp?.replace(/[^0-9]/g, '') || '';
+
+  const hasWhatsapp = Boolean(contact.whatsapp?.trim());
+  const hasWebsite = Boolean(contact.website?.trim());
+  const hasInstagram = Boolean(contact.instagram?.trim());
+  const hasFacebook = Boolean(contact.facebook?.trim());
+  const hasTiktok = Boolean(contact.tiktok?.trim());
+  const hasPinterest = Boolean(contact.pinterest?.trim());
+  const validCustomSocials = (contact.customSocials || []).filter(
+    (s) => s.url && s.url.trim()
+  );
+  const hasLocation = Boolean(contact.location?.trim());
+
+  const totalChannels =
+    (hasWhatsapp ? 1 : 0) +
+    (hasWebsite ? 1 : 0) +
+    (hasInstagram ? 1 : 0) +
+    (hasFacebook ? 1 : 0) +
+    (hasTiktok ? 1 : 0) +
+    (hasPinterest ? 1 : 0) +
+    validCustomSocials.length;
 
   return (
     <div
@@ -112,60 +132,183 @@ export const CatalogBackCoverPage: React.FC<CatalogBackCoverPageProps> = ({
         </div>
 
         {/* Contact Links */}
-        <div
-          className="p-4 sm:p-5 rounded-md border bg-white/70 backdrop-blur-xs shadow-2xs flex flex-col gap-3"
-          style={{ borderColor: palette.border }}
-        >
-          <h3
-            className="font-serif text-sm sm:text-base font-semibold uppercase tracking-wider mb-0.5 flex items-center gap-2"
-            style={{ color: palette.primary }}
+        {(totalChannels > 0 || hasLocation) && (
+          <div
+            className="p-4 sm:p-5 rounded-md border bg-white/70 backdrop-blur-xs shadow-2xs flex flex-col gap-3"
+            style={{ borderColor: palette.border }}
           >
-            <HeartHandshake className="w-4 h-4" /> Canales de Atención Directa
-          </h3>
-
-          {contact.whatsapp && (
-            <a
-              href={`https://wa.me/${phoneOnly}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-3 p-2 rounded-sm transition-all hover:bg-black/5"
-              style={{ color: palette.textPrimary }}
+            <h3
+              className="font-serif text-sm sm:text-base font-semibold uppercase tracking-wider mb-0.5 flex items-center gap-2"
+              style={{ color: palette.primary }}
             >
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0"
-                style={{ backgroundColor: '#25D366' }}
-              >
-                <MessageCircle className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">WhatsApp Pedidos</span>
-                <span className="font-semibold text-xs sm:text-sm">{contact.whatsapp}</span>
-              </div>
-            </a>
-          )}
+              <HeartHandshake className="w-4 h-4" /> Canales de Atención Directa
+            </h3>
 
-          {contact.instagram && (
-            <div className="flex items-center gap-3 p-2 rounded-sm" style={{ color: palette.textPrimary }}>
-              <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-white shrink-0"
-                style={{ backgroundColor: '#E1306C' }}
-              >
-                <AtSign className="w-4 h-4" />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase font-bold tracking-wider opacity-60">Instagram</span>
-                <span className="font-semibold text-xs sm:text-sm">{contact.instagram}</span>
-              </div>
-            </div>
-          )}
+            <div className={totalChannels >= 2 ? 'grid grid-cols-1 sm:grid-cols-2 gap-2' : 'flex flex-col gap-2'}>
+              {hasWhatsapp && (
+                <a
+                  href={`https://wa.me/${phoneOnly}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2.5 p-1.5 sm:p-2 rounded-sm transition-all hover:bg-black/5"
+                  style={{ color: palette.textPrimary }}
+                >
+                  <div
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white shrink-0"
+                    style={{ backgroundColor: '#25D366' }}
+                  >
+                    <MessageCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[9px] uppercase font-bold tracking-wider opacity-60">WhatsApp Pedidos</span>
+                    <span className="font-semibold text-xs truncate">{contact.whatsapp}</span>
+                  </div>
+                </a>
+              )}
 
-          {contact.location && (
-            <div className="flex items-center gap-3 px-2 text-xs opacity-80" style={{ color: palette.textSecondary }}>
-              <MapPin className="w-4 h-4 flex-shrink-0" style={{ color: palette.secondary }} />
-              <span>{contact.location}</span>
+              {hasWebsite && (
+                <a
+                  href={contact.website!.startsWith('http') ? contact.website! : `https://${contact.website!}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2.5 p-1.5 sm:p-2 rounded-sm transition-all hover:bg-black/5"
+                  style={{ color: palette.textPrimary }}
+                >
+                  <div
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white shrink-0"
+                    style={{ backgroundColor: palette.primary }}
+                  >
+                    <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[9px] uppercase font-bold tracking-wider opacity-60">Sitio Web</span>
+                    <span className="font-semibold text-xs truncate">{contact.website!.replace(/^https?:\/\//, '')}</span>
+                  </div>
+                </a>
+              )}
+
+              {hasInstagram && (
+                <a
+                  href={contact.instagram!.startsWith('http') ? contact.instagram! : `https://instagram.com/${contact.instagram!.replace(/^@/, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2.5 p-1.5 sm:p-2 rounded-sm transition-all hover:bg-black/5"
+                  style={{ color: palette.textPrimary }}
+                >
+                  <div
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white shrink-0"
+                    style={{ backgroundColor: '#E1306C' }}
+                  >
+                    <AtSign className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[9px] uppercase font-bold tracking-wider opacity-60">Instagram</span>
+                    <span className="font-semibold text-xs truncate">{contact.instagram}</span>
+                  </div>
+                </a>
+              )}
+
+              {hasFacebook && (
+                <a
+                  href={contact.facebook!.startsWith('http') ? contact.facebook! : `https://facebook.com/${contact.facebook!.replace(/^@/, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2.5 p-1.5 sm:p-2 rounded-sm transition-all hover:bg-black/5"
+                  style={{ color: palette.textPrimary }}
+                >
+                  <div
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white shrink-0"
+                    style={{ backgroundColor: '#1877F2' }}
+                  >
+                    <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" viewBox="0 0 24 24">
+                      <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                    </svg>
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[9px] uppercase font-bold tracking-wider opacity-60">Facebook</span>
+                    <span className="font-semibold text-xs truncate">{contact.facebook}</span>
+                  </div>
+                </a>
+              )}
+
+              {hasTiktok && (
+                <a
+                  href={contact.tiktok!.startsWith('http') ? contact.tiktok! : `https://tiktok.com/@${contact.tiktok!.replace(/^@/, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2.5 p-1.5 sm:p-2 rounded-sm transition-all hover:bg-black/5"
+                  style={{ color: palette.textPrimary }}
+                >
+                  <div
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white shrink-0 bg-stone-900"
+                  >
+                    <Music2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[9px] uppercase font-bold tracking-wider opacity-60">TikTok</span>
+                    <span className="font-semibold text-xs truncate">{contact.tiktok}</span>
+                  </div>
+                </a>
+              )}
+
+              {hasPinterest && (
+                <a
+                  href={contact.pinterest!.startsWith('http') ? contact.pinterest! : `https://pinterest.com/${contact.pinterest!.replace(/^@/, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2.5 p-1.5 sm:p-2 rounded-sm transition-all hover:bg-black/5"
+                  style={{ color: palette.textPrimary }}
+                >
+                  <div
+                    className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white shrink-0"
+                    style={{ backgroundColor: '#E60023' }}
+                  >
+                    <Pin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  </div>
+                  <div className="flex flex-col min-w-0">
+                    <span className="text-[9px] uppercase font-bold tracking-wider opacity-60">Pinterest</span>
+                    <span className="font-semibold text-xs truncate">{contact.pinterest}</span>
+                  </div>
+                </a>
+              )}
+
+              {validCustomSocials.map((s, idx) => {
+                const isUrl = s.url.startsWith('http://') || s.url.startsWith('https://');
+                const href = isUrl ? s.url : `https://${s.url}`;
+                return (
+                  <a
+                    key={s.id || idx}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2.5 p-1.5 sm:p-2 rounded-sm transition-all hover:bg-black/5"
+                    style={{ color: palette.textPrimary }}
+                  >
+                    <div
+                      className="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white shrink-0"
+                      style={{ backgroundColor: palette.secondary || '#4b5563' }}
+                    >
+                      <Share2 className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                    </div>
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[9px] uppercase font-bold tracking-wider opacity-60">
+                        {s.name?.trim() || 'Red Social'}
+                      </span>
+                      <span className="font-semibold text-xs truncate">{s.url}</span>
+                    </div>
+                  </a>
+                );
+              })}
             </div>
-          )}
-        </div>
+
+            {hasLocation && (
+              <div className="flex items-center gap-2.5 px-2 pt-1 text-xs opacity-80 border-t border-black/5" style={{ color: palette.textSecondary }}>
+                <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" style={{ color: palette.secondary }} />
+                <span className="truncate">{contact.location}</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {contact.deliveryNotes && (
           <p className="text-center text-[11px] leading-relaxed italic opacity-80 max-w-sm mx-auto" style={{ color: palette.textSecondary }}>

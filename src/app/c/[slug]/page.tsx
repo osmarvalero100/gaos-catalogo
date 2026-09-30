@@ -10,7 +10,7 @@ import { FragranceBadgeList } from '../../../components/preview/FragranceBadgeLi
 import { ColorSwatchList } from '../../../components/preview/ColorSwatchList';
 import { IncludesBadgeList } from '../../../components/preview/IncludesBadgeList';
 import { PdfExportModal } from '../../../components/shared/PdfExportModal';
-import { MessageCircle, FileDown, Search, Grid, BookOpen, Clock, Sparkles } from 'lucide-react';
+import { MessageCircle, FileDown, Search, Grid, BookOpen, Clock, Sparkles, Globe } from 'lucide-react';
 
 import { useParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
@@ -202,6 +202,24 @@ export default function CustomerCatalogView() {
               <FileDown className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">Descargar PDF</span>
             </button>
+
+            {/* Optional Website Link */}
+            {catalog.contact.website?.trim() && (
+              <a
+                href={
+                  catalog.contact.website.startsWith('http')
+                    ? catalog.contact.website
+                    : `https://${catalog.contact.website}`
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded-lg border border-stone-300 text-xs font-semibold text-stone-700 hover:bg-stone-100 flex items-center gap-1.5 transition-colors"
+                title="Visitar sitio web"
+              >
+                <Globe className="w-3.5 h-3.5 text-stone-600" />
+                <span className="hidden sm:inline">Web</span>
+              </a>
+            )}
 
             {/* Contact WhatsApp */}
             {catalog.contact.whatsapp && (

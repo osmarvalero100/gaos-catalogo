@@ -125,8 +125,14 @@ export const CatalogCoverPage: React.FC<CatalogCoverPageProps> = ({
         className="relative z-10 pt-3 sm:pt-4 border-t flex justify-between items-center text-[10px] md:text-xs tracking-wider uppercase opacity-70"
         style={{ borderColor: `${palette.border}` }}
       >
-        <span>{contact.instagram || '@tumarca'}</span>
-        <span>{contact.whatsapp || 'WhatsApp'}</span>
+        <span>
+          {contact.instagram ||
+            contact.website?.replace(/^https?:\/\//, '') ||
+            contact.facebook ||
+            contact.tiktok ||
+            ''}
+        </span>
+        <span>{contact.whatsapp || ''}</span>
         <span>Página 1</span>
       </div>
     </div>

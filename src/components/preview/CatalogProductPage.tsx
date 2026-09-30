@@ -325,7 +325,13 @@ export const CatalogProductPage: React.FC<CatalogProductPageProps> = ({
         style={{ borderColor: palette.border }}
       >
         <span>{catalog.brandName}</span>
-        <span>{contact.whatsapp || contact.instagram}</span>
+        <span>
+          {contact.whatsapp ||
+            contact.instagram ||
+            (contact.website ? contact.website.replace(/^https?:\/\//, '') : '') ||
+            contact.facebook ||
+            ''}
+        </span>
         <span>Página {pageNumber}</span>
       </div>
     </div>
