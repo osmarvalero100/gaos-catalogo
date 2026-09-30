@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Lock, Mail, User, Eye, EyeOff, Loader2, Sparkles, Check, ArrowRight } from 'lucide-react';
+import { Lock, Mail, User, Eye, EyeOff, Loader2, Check, ArrowRight } from 'lucide-react';
 
 function LoginFormContent() {
   const router = useRouter();
@@ -85,13 +85,6 @@ function LoginFormContent() {
     }
   };
 
-  const handleFillDefaultAdmin = () => {
-    setMode('login');
-    setEmail('gaos.storeco@gmail.com');
-    setPassword('G40sC@ndles');
-    setErrorMsg(null);
-  };
-
   return (
     <div className="w-full max-w-md bg-white rounded-2xl shadow-xl border border-stone-200/80 p-8 sm:p-10 backdrop-blur-md">
       {/* Brand Header */}
@@ -140,26 +133,6 @@ function LoginFormContent() {
           }`}
         >
           Crear Cuenta
-        </button>
-      </div>
-
-      {/* Quick access banner for GAOS store admin */}
-      <div className="mb-6 p-3 bg-amber-50/80 border border-amber-200/80 rounded-xl text-xs text-amber-900 flex items-start justify-between gap-3">
-        <div className="space-y-0.5">
-          <span className="font-bold flex items-center gap-1 text-[11px] uppercase tracking-wider text-amber-800">
-            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-            Cuenta Principal GAOS
-          </span>
-          <p className="text-[11px] text-amber-800/90 leading-tight">
-            gaos.storeco@gmail.com
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={handleFillDefaultAdmin}
-          className="px-2.5 py-1.5 text-[11px] font-semibold bg-amber-200/70 hover:bg-amber-200 text-amber-950 rounded-lg transition-colors shrink-0"
-        >
-          Autocompletar
         </button>
       </div>
 
