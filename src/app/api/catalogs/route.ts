@@ -1,13 +1,23 @@
 import { NextResponse } from 'next/server';
 import { getAllCatalogs, saveCatalogToDb } from '@/lib/db';
+import { getAuthenticatedUser } from '@/lib/auth';
 import { INITIAL_CATALOG } from '@/data/defaultCatalog';
 import { SEASONAL_PRESETS } from '@/data/seasonalThemes';
 import { SeasonKey } from '@/types/catalog';
 
-export async function GET() {
+export async function GET(request: Request) {
   try {
-    const catalogs = await getAllCatalogs();
-    return NextResponse.json({ catalogs });
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Debes iniciar sesión para ver tus catálogos.' },
+        { status: 401 }
+      );
+    }
+
+    // Only return catalogs owned by the logged-in user
+    const catalogs = await getAllCatalogs(user.id);
+    return NextResponse.json({ catalogs, userId: user.id });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error al listar catálogos';
     return NextResponse.json({ error: message }, { status: 500 });
@@ -16,11 +26,19 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const user = await getAuthenticatedUser(request);
+    if (!user) {
+      return NextResponse.json(
+        { error: 'Debes iniciar sesión para crear o guardar catálogos.' },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
 
     // If request contains full catalog object
     if (body.products && body.title) {
-      const saved = await saveCatalogToDb(body);
+      const saved = await saveCatalogToDb(body, user.id);
       return NextResponse.json({ success: true, catalog: saved }, { status: 201 });
     }
 
@@ -50,11 +68,12 @@ export async function POST(request: Request) {
         season,
         palette: preset.theme.palette,
       },
-      products: [], // start clean or with template products
+      products: [],
+      userId: user.id,
       updatedAt: new Date().toISOString(),
     };
 
-    const saved = await saveCatalogToDb(newCatalog);
+    const saved = await saveCatalogToDb(newCatalog, user.id);
     return NextResponse.json({ success: true, catalog: saved }, { status: 201 });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : 'Error al crear catálogo';

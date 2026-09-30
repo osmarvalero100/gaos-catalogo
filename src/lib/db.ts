@@ -1,4 +1,5 @@
 import mysql from 'mysql2/promise';
+import crypto from 'crypto';
 import { Catalog, Product } from '../types/catalog';
 import { INITIAL_CATALOG } from '../data/defaultCatalog';
 
@@ -41,6 +42,7 @@ let initPromise: Promise<void> | null = null;
 
 /**
  * Initializes MySQL tables if they do not exist and seeds initial catalog if database is empty.
+ * Also configures user authentication tables and migrates existing catalogs to gaos.storeco@gmail.com.
  */
 export async function initDatabase(): Promise<void> {
   if (global.__dbInitialized) return;
@@ -49,7 +51,33 @@ export async function initDatabase(): Promise<void> {
   initPromise = (async () => {
     const pool = getPool();
 
-    // Create catalogs table
+    // 1. Create users table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        password_hash VARCHAR(255) NOT NULL,
+        name VARCHAR(255) DEFAULT '',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        INDEX idx_email (email)
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // 2. Create sessions table
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS sessions (
+        id VARCHAR(128) PRIMARY KEY,
+        user_id INT NOT NULL,
+        expires_at DATETIME NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_user_id (user_id),
+        INDEX idx_expires (expires_at),
+        CONSTRAINT fk_sessions_user FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+    `);
+
+    // 3. Create catalogs table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS catalogs (
         id VARCHAR(64) PRIMARY KEY,
@@ -62,6 +90,7 @@ export async function initDatabase(): Promise<void> {
         brand_logo LONGTEXT,
         cover_image LONGTEXT,
         intro_text TEXT,
+        user_id INT NULL,
         featured_section_title VARCHAR(255) DEFAULT 'Colección Destacada',
         regular_section_title VARCHAR(255) DEFAULT 'Velas & Aromas',
         theme_config JSON NOT NULL,
@@ -69,9 +98,24 @@ export async function initDatabase(): Promise<void> {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_slug (slug),
+        INDEX idx_user_id (user_id),
         INDEX idx_updated_at (updated_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    // Ensure user_id column exists in existing catalogs table
+    try {
+      const [cols] = await pool.query<mysql.RowDataPacket[]>(
+        "SHOW COLUMNS FROM catalogs LIKE 'user_id'"
+      );
+      if (cols.length === 0) {
+        await pool.query(
+          "ALTER TABLE catalogs ADD COLUMN user_id INT NULL AFTER intro_text, ADD INDEX idx_user_id (user_id)"
+        );
+      }
+    } catch (migErr) {
+      console.warn('Could not check or alter user_id column in catalogs:', migErr);
+    }
 
     // Ensure section titles columns exist in existing catalogs table
     try {
@@ -87,7 +131,7 @@ export async function initDatabase(): Promise<void> {
       console.warn('Could not check or alter section titles columns in catalogs:', migErr);
     }
 
-    // Create products table
+    // 4. Create products table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS products (
         id VARCHAR(64) PRIMARY KEY,
@@ -127,15 +171,43 @@ export async function initDatabase(): Promise<void> {
       console.warn('Could not check or alter includes column:', migErr);
     }
 
+    // 5. Ensure default user gaos.storeco@gmail.com exists (Password: G40sC@ndles)
+    let defaultUserId: number | null = null;
+    const [userRows] = await pool.query<mysql.RowDataPacket[]>(
+      'SELECT id FROM users WHERE email = ? LIMIT 1',
+      ['gaos.storeco@gmail.com']
+    );
+
+    if (userRows.length === 0) {
+      const salt = crypto.randomBytes(16).toString('hex');
+      const hash = crypto.scryptSync('G40sC@ndles', salt, 64).toString('hex');
+      const [insertRes] = await pool.query<mysql.ResultSetHeader>(
+        'INSERT INTO users (email, password_hash, name) VALUES (?, ?, ?)',
+        ['gaos.storeco@gmail.com', `${salt}:${hash}`, 'GAOS CANDLES']
+      );
+      defaultUserId = insertRes.insertId;
+      console.log(`Created default user gaos.storeco@gmail.com with ID ${defaultUserId}`);
+    } else {
+      defaultUserId = Number(userRows[0].id);
+    }
+
+    // 6. Associate all existing unowned catalogs to gaos.storeco@gmail.com
+    if (defaultUserId) {
+      await pool.query(
+        'UPDATE catalogs SET user_id = ? WHERE user_id IS NULL OR user_id = 0',
+        [defaultUserId]
+      );
+    }
+
     global.__dbInitialized = true;
 
-    // Check if any catalog exists; if not, seed the initial catalog
+    // 7. Check if any catalog exists; if not, seed the initial catalog with defaultUserId
     const [rows] = await pool.query<mysql.RowDataPacket[]>('SELECT COUNT(*) as count FROM catalogs');
     const count = rows[0]?.count || 0;
 
     if (count === 0) {
       console.log('Seeding initial catalog into MySQL database...');
-      await saveCatalogToDb(INITIAL_CATALOG);
+      await saveCatalogToDb({ ...INITIAL_CATALOG, userId: defaultUserId || undefined }, defaultUserId || undefined);
     }
   })();
 
@@ -157,17 +229,19 @@ export interface CatalogListItem {
   coverImage: string;
   productCount: number;
   season: string;
+  userId?: number;
   updatedAt: string;
 }
 
 /**
- * Lists all catalogs with product count and metadata
+ * Lists catalogs with product count and metadata.
+ * If userId is provided, returns ONLY catalogs owned by that user.
  */
-export async function getAllCatalogs(): Promise<CatalogListItem[]> {
+export async function getAllCatalogs(userId?: number): Promise<CatalogListItem[]> {
   await initDatabase();
   const pool = getPool();
 
-  const [rows] = await pool.query<mysql.RowDataPacket[]>(`
+  const query = `
     SELECT 
       c.id,
       c.slug,
@@ -178,13 +252,17 @@ export async function getAllCatalogs(): Promise<CatalogListItem[]> {
       c.brand_name as brandName,
       c.cover_image as coverImage,
       c.theme_config->>'$.season' as season,
+      c.user_id as userId,
       c.updated_at as updatedAt,
       COUNT(p.id) as productCount
     FROM catalogs c
     LEFT JOIN products p ON c.id = p.catalog_id
+    ${userId ? 'WHERE c.user_id = ?' : ''}
     GROUP BY c.id
     ORDER BY c.updated_at DESC
-  `);
+  `;
+
+  const [rows] = await pool.query<mysql.RowDataPacket[]>(query, userId ? [userId] : []);
 
   return rows.map((r) => ({
     id: r.id,
@@ -196,6 +274,7 @@ export async function getAllCatalogs(): Promise<CatalogListItem[]> {
     brandName: r.brandName || '',
     coverImage: r.coverImage || '',
     season: r.season || 'navidad',
+    userId: r.userId ? Number(r.userId) : undefined,
     updatedAt: r.updatedAt ? new Date(r.updatedAt).toISOString() : new Date().toISOString(),
     productCount: Number(r.productCount || 0),
   }));
@@ -261,14 +340,16 @@ export async function getCatalogByIdOrSlug(idOrSlug: string): Promise<Catalog | 
     products,
     theme,
     contact,
+    userId: c.user_id ? Number(c.user_id) : undefined,
     updatedAt: c.updated_at ? new Date(c.updated_at).toISOString() : new Date().toISOString(),
   };
 }
 
 /**
- * Saves (creates or updates) a catalog and its products in a transaction
+ * Saves (creates or updates) a catalog and its products in a transaction.
+ * Enforces ownership: only the owner can update an existing catalog.
  */
-export async function saveCatalogToDb(catalog: Catalog): Promise<Catalog> {
+export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promise<Catalog> {
   await initDatabase();
   const pool = getPool();
   const connection = await pool.getConnection();
@@ -282,6 +363,21 @@ export async function saveCatalogToDb(catalog: Catalog): Promise<Catalog> {
       .trim()
       .replace(/[^a-z0-9_-]/g, '-');
 
+    // Ownership check: If catalog exists, verify that the current user is the owner
+    const [existingRows] = await connection.query<mysql.RowDataPacket[]>(
+      'SELECT id, user_id FROM catalogs WHERE id = ? OR slug = ? LIMIT 1',
+      [catalogId, slug]
+    );
+
+    if (existingRows.length > 0 && userId) {
+      const existingOwnerId = existingRows[0].user_id ? Number(existingRows[0].user_id) : null;
+      if (existingOwnerId !== null && existingOwnerId !== userId) {
+        throw new Error('No tienes permiso para editar este catálogo. Solo el dueño del catálogo puede modificarlo.');
+      }
+    }
+
+    const effectiveUserId = userId || catalog.userId || (existingRows.length > 0 ? existingRows[0].user_id : null);
+
     const themeJson = JSON.stringify(catalog.theme || {});
     const contactJson = JSON.stringify(catalog.contact || {});
 
@@ -291,9 +387,10 @@ export async function saveCatalogToDb(catalog: Catalog): Promise<Catalog> {
       INSERT INTO catalogs (
         id, slug, title, subtitle, season_tag, edition_year,
         brand_name, brand_logo, cover_image, intro_text,
+        user_id,
         featured_section_title, regular_section_title,
         theme_config, contact_info, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
       ON DUPLICATE KEY UPDATE
         slug = VALUES(slug),
         title = VALUES(title),
@@ -304,6 +401,7 @@ export async function saveCatalogToDb(catalog: Catalog): Promise<Catalog> {
         brand_logo = VALUES(brand_logo),
         cover_image = VALUES(cover_image),
         intro_text = VALUES(intro_text),
+        user_id = COALESCE(catalogs.user_id, VALUES(user_id)),
         featured_section_title = VALUES(featured_section_title),
         regular_section_title = VALUES(regular_section_title),
         theme_config = VALUES(theme_config),
@@ -321,6 +419,7 @@ export async function saveCatalogToDb(catalog: Catalog): Promise<Catalog> {
         catalog.brandLogo || '/gaos-candles.svg',
         catalog.coverImage || '',
         catalog.introText || '',
+        effectiveUserId,
         catalog.featuredSectionTitle || 'Colección Destacada',
         catalog.regularSectionTitle || 'Velas & Aromas',
         themeJson,
@@ -377,6 +476,7 @@ export async function saveCatalogToDb(catalog: Catalog): Promise<Catalog> {
       ...catalog,
       id: catalogId,
       slug,
+      userId: effectiveUserId ? Number(effectiveUserId) : undefined,
       updatedAt: new Date().toISOString(),
     };
   } catch (err) {
@@ -388,22 +488,26 @@ export async function saveCatalogToDb(catalog: Catalog): Promise<Catalog> {
 }
 
 /**
- * Deletes a catalog and cascades to all its products
+ * Deletes a catalog and cascades to all its products.
+ * If userId is provided, ensures only the owner can delete it.
  */
-export async function deleteCatalogFromDb(idOrSlug: string): Promise<boolean> {
+export async function deleteCatalogFromDb(idOrSlug: string, userId?: number): Promise<boolean> {
   await initDatabase();
   const pool = getPool();
-  const [result] = await pool.query<mysql.ResultSetHeader>(
-    'DELETE FROM catalogs WHERE id = ? OR slug = ?',
-    [idOrSlug, idOrSlug]
-  );
+  let query = 'DELETE FROM catalogs WHERE (id = ? OR slug = ?)';
+  const params: unknown[] = [idOrSlug, idOrSlug];
+  if (userId) {
+    query += ' AND user_id = ?';
+    params.push(userId);
+  }
+  const [result] = await pool.query<mysql.ResultSetHeader>(query, params);
   return result.affectedRows > 0;
 }
 
 /**
- * Duplicates an existing catalog under a new slug and title
+ * Duplicates an existing catalog under a new slug and title, assigning it to the requesting user
  */
-export async function duplicateCatalogInDb(sourceIdOrSlug: string, newTitle?: string): Promise<Catalog> {
+export async function duplicateCatalogInDb(sourceIdOrSlug: string, userId?: number, newTitle?: string): Promise<Catalog> {
   const source = await getCatalogByIdOrSlug(sourceIdOrSlug);
   if (!source) {
     throw new Error('Catálogo de origen no encontrado');
@@ -420,6 +524,7 @@ export async function duplicateCatalogInDb(sourceIdOrSlug: string, newTitle?: st
     id: newId,
     slug: newSlug,
     title,
+    userId: userId || source.userId,
     products: source.products.map((p, idx) => ({
       ...p,
       id: `prod_${timestamp}_${idx}`,
@@ -427,5 +532,5 @@ export async function duplicateCatalogInDb(sourceIdOrSlug: string, newTitle?: st
     updatedAt: new Date().toISOString(),
   };
 
-  return await saveCatalogToDb(duplicated);
+  return await saveCatalogToDb(duplicated, userId);
 }

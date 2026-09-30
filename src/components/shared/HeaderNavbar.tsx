@@ -11,10 +11,14 @@ import {
   Check,
   FolderOpen,
   ChevronDown,
+  User,
+  LogOut,
 } from 'lucide-react';
 
 interface HeaderNavbarProps {
   catalog: Catalog;
+  user?: { email: string; name?: string } | null;
+  onLogout?: () => void;
   onOpenPdfModal: () => void;
   onOpenShareModal: () => void;
   onSave: () => void;
@@ -27,6 +31,8 @@ interface HeaderNavbarProps {
 
 export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   catalog,
+  user,
+  onLogout,
   onOpenPdfModal,
   onOpenShareModal,
   onSave,
@@ -200,6 +206,31 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
             <FileDown className="w-4 h-4" />
             <span>Generar PDF</span>
           </button>
+
+          {/* User profile & Logout */}
+          {user && (
+            <div className="flex items-center gap-1.5 pl-2 border-l border-stone-800">
+              <div
+                className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-stone-800/80 border border-stone-700/60 text-xs text-stone-300"
+                title={`Sesión iniciada como: ${user.email}`}
+              >
+                <User className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                <span className="max-w-[120px] lg:max-w-[150px] truncate font-medium">
+                  {user.name || user.email.split('@')[0]}
+                </span>
+              </div>
+              {onLogout && (
+                <button
+                  type="button"
+                  onClick={onLogout}
+                  className="p-1.5 text-stone-400 hover:text-rose-400 hover:bg-stone-800 rounded-lg transition-colors"
+                  title="Cerrar sesión"
+                >
+                  <LogOut className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </header>

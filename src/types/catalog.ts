@@ -90,5 +90,6 @@ export interface Catalog {
   products: Product[];
   theme: ThemeConfig;
   contact: ContactInfo;
+  userId?: number;
   updatedAt: string;
 }

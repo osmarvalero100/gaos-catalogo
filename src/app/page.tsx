@@ -10,9 +10,18 @@ import { CatalogPreview } from '../components/preview/CatalogPreview';
 import { PdfExportModal } from '../components/shared/PdfExportModal';
 import { ShareUrlModal } from '../components/shared/ShareUrlModal';
 import { CatalogManagerModal } from '../components/shared/CatalogManagerModal';
-import { SlidersHorizontal, Eye } from 'lucide-react';
+import { SlidersHorizontal, Eye, Loader2 } from 'lucide-react';
+
+interface AuthUserData {
+  id: number;
+  email: string;
+  name?: string;
+}
 
 export default function CatalogStudioPage() {
+  const [currentUser, setCurrentUser] = useState<AuthUserData | null>(null);
+  const [isAuthChecking, setIsAuthChecking] = useState<boolean>(true);
+
   const [catalog, setCatalog] = useState<Catalog>(INITIAL_CATALOG);
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [saveMessage, setSaveMessage] = useState<string>('Guardado en MySQL');
@@ -21,15 +30,39 @@ export default function CatalogStudioPage() {
   const [isCatalogManagerOpen, setIsCatalogManagerOpen] = useState<boolean>(false);
   const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
 
-  // Load catalog on mount: check URL query param or fallback to current MySQL catalog / localStorage
+  // Verify authentication and load catalog on mount
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const urlParams = new URLSearchParams(window.location.search);
     const requestedSlug = urlParams.get('catalog');
 
-    async function loadInitialCatalog() {
-      // 1. If a specific slug is requested in URL, fetch it from MySQL
+    async function verifyAuthAndLoad() {
+      // 1. Check if user is logged in
+      try {
+        const authRes = await fetch('/api/auth/me');
+        if (!authRes.ok) {
+          const currentUrl = window.location.pathname + window.location.search;
+          window.location.href = `/login?redirect=${encodeURIComponent(currentUrl)}`;
+          return;
+        }
+
+        const authData = await authRes.json();
+        if (!authData?.authenticated || !authData?.user) {
+          const currentUrl = window.location.pathname + window.location.search;
+          window.location.href = `/login?redirect=${encodeURIComponent(currentUrl)}`;
+          return;
+        }
+
+        setCurrentUser(authData.user);
+        setIsAuthChecking(false);
+      } catch (err) {
+        console.error('Error verifying auth:', err);
+        window.location.href = '/login';
+        return;
+      }
+
+      // 2. If a specific slug is requested in URL, fetch it from MySQL
       if (requestedSlug) {
         try {
           const res = await fetch(`/api/catalogs/${requestedSlug}`);
@@ -46,7 +79,7 @@ export default function CatalogStudioPage() {
         }
       }
 
-      // 2. Otherwise, fetch the most recent active catalog from MySQL
+      // 3. Otherwise, fetch the user's most recent active catalog from MySQL
       try {
         const res = await fetch('/api/catalog?slug=current');
         if (res.ok) {
@@ -54,7 +87,6 @@ export default function CatalogStudioPage() {
           if (data && data.id) {
             setCatalog(data);
             saveCatalogToStorage(data);
-            // Update URL without reload
             const newUrl = `${window.location.pathname}?catalog=${data.slug}`;
             window.history.replaceState(null, '', newUrl);
             return;
@@ -64,19 +96,28 @@ export default function CatalogStudioPage() {
         console.error('Error fetching current catalog from DB:', err);
       }
 
-      // 3. Fallback to localStorage or INITIAL_CATALOG
+      // 4. Fallback to localStorage or INITIAL_CATALOG
       const stored = getCatalogFromStorage();
       if (stored) {
         setCatalog(stored);
       }
     }
 
-    loadInitialCatalog();
+    verifyAuthAndLoad();
   }, []);
 
   const handleCatalogChange = (updated: Catalog) => {
     setCatalog(updated);
     setIsSaved(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+    } catch (err) {
+      console.error('Error logging out:', err);
+    }
+    window.location.href = '/login';
   };
 
   const handleSave = async () => {
@@ -99,7 +140,17 @@ export default function CatalogStudioPage() {
           setCatalog(data.catalog);
         }
       } else {
-        setSaveMessage('Guardado solo local');
+        const errData = await res.json().catch(() => ({}));
+        if (res.status === 401) {
+          window.location.href = '/login';
+          return;
+        }
+        if (res.status === 403) {
+          alert(errData.error || 'No tienes permiso para editar este catálogo. Solo el dueño puede modificarlo.');
+          setSaveMessage('Sin permisos de edición');
+          return;
+        }
+        setSaveMessage(errData.error || 'Guardado solo local');
       }
     } catch {
       setSaveMessage('Guardado en navegador');
@@ -159,11 +210,31 @@ export default function CatalogStudioPage() {
     setTimeout(() => setIsSaved(false), 3000);
   };
 
+  if (isAuthChecking) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-stone-900 text-stone-100">
+        <div className="w-14 h-14 rounded-full bg-white/10 flex items-center justify-center p-2.5 mb-4 shadow-sm">
+          <img
+            src="/gaos-candles.svg"
+            alt="GAOS CANDLES"
+            className="w-full h-full object-contain invert brightness-0 invert"
+          />
+        </div>
+        <Loader2 className="w-6 h-6 animate-spin text-emerald-400 mb-2" />
+        <p className="text-xs text-stone-400 font-mono tracking-wide">
+          Verificando sesión en GAOS CANDLES...
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       {/* Top App Header */}
       <HeaderNavbar
         catalog={catalog}
+        user={currentUser}
+        onLogout={handleLogout}
         onOpenPdfModal={() => setIsPdfModalOpen(true)}
         onOpenShareModal={() => setIsShareModalOpen(true)}
         onOpenCatalogManager={() => setIsCatalogManagerOpen(true)}

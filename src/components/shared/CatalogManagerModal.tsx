@@ -46,6 +46,10 @@ export const CatalogManagerModal: React.FC<CatalogManagerModalProps> = ({
     setIsLoading(true);
     try {
       const res = await fetch('/api/catalogs');
+      if (res.status === 401) {
+        window.location.href = '/login';
+        return;
+      }
       if (res.ok) {
         const data = await res.json();
         setCatalogs(data.catalogs || []);

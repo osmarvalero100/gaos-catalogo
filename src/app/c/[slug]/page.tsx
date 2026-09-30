@@ -10,7 +10,7 @@ import { FragranceBadgeList } from '../../../components/preview/FragranceBadgeLi
 import { ColorSwatchList } from '../../../components/preview/ColorSwatchList';
 import { IncludesBadgeList } from '../../../components/preview/IncludesBadgeList';
 import { PdfExportModal } from '../../../components/shared/PdfExportModal';
-import { MessageCircle, FileDown, Search, Grid, BookOpen, Clock, Sparkles, Globe } from 'lucide-react';
+import { MessageCircle, FileDown, Search, Grid, BookOpen, Clock, Sparkles, Globe, SlidersHorizontal } from 'lucide-react';
 
 import { useParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
@@ -231,6 +231,18 @@ export default function CustomerCatalogView() {
               >
                 <MessageCircle className="w-4 h-4" />
                 <span>WhatsApp</span>
+              </a>
+            )}
+
+            {/* Owner shortcut to Studio */}
+            {(catalog as any).isOwner && (
+              <a
+                href={`/?catalog=${catalog.slug}`}
+                className="px-3 py-1.5 rounded-lg bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors"
+                title="Editar este catálogo en el Estudio"
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5 text-emerald-400" />
+                <span className="hidden sm:inline">Editar</span>
               </a>
             )}
           </div>
