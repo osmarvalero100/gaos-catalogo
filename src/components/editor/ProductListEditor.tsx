@@ -8,11 +8,13 @@ import { SEASONAL_PRESETS } from '../../data/seasonalThemes';
 interface ProductListEditorProps {
   catalog: Catalog;
   onChange: (products: Product[]) => void;
+  onUpdateCatalog?: (catalog: Catalog) => void;
 }
 
 export const ProductListEditor: React.FC<ProductListEditorProps> = ({
   catalog,
   onChange,
+  onUpdateCatalog,
 }) => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -90,6 +92,55 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
           <span>Agregar Vela</span>
         </button>
       </div>
+
+      {/* Section Titles Settings */}
+      {onUpdateCatalog && (
+        <div className="p-3.5 bg-stone-100/80 border border-stone-200 rounded-xl space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-stone-800 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              Títulos de Secciones en Páginas
+            </span>
+            <span className="text-[10px] text-stone-500 font-mono">Páginas de Velas</span>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label className="block text-[10px] font-semibold text-stone-600 uppercase mb-0.5">
+                Sección 1 (Pág. Destacada)
+              </label>
+              <input
+                type="text"
+                value={catalog.featuredSectionTitle ?? 'Colección Destacada'}
+                onChange={(e) =>
+                  onUpdateCatalog({
+                    ...catalog,
+                    featuredSectionTitle: e.target.value,
+                  })
+                }
+                placeholder="Colección Destacada"
+                className="w-full px-2.5 py-1.5 text-xs bg-white border border-stone-200 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[10px] font-semibold text-stone-600 uppercase mb-0.5">
+                Sección 2 (Catálogo General)
+              </label>
+              <input
+                type="text"
+                value={catalog.regularSectionTitle ?? 'Velas & Aromas'}
+                onChange={(e) =>
+                  onUpdateCatalog({
+                    ...catalog,
+                    regularSectionTitle: e.target.value,
+                  })
+                }
+                placeholder="Velas & Aromas"
+                className="w-full px-2.5 py-1.5 text-xs bg-white border border-stone-200 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Product items list */}
       {catalog.products.length === 0 ? (

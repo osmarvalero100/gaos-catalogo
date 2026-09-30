@@ -8,11 +8,13 @@ import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Layers } from 'lucide-react
 interface CatalogPreviewProps {
   catalog: Catalog;
   isPrintMode?: boolean;
+  onChange?: (updatedCatalog: Catalog) => void;
 }
 
 export const CatalogPreview: React.FC<CatalogPreviewProps> = ({
   catalog,
   isPrintMode = false,
+  onChange,
 }) => {
   // 2 products per page for high-luxury editorial layout
   const productsPerPage = 2;
@@ -21,6 +23,21 @@ export const CatalogPreview: React.FC<CatalogPreviewProps> = ({
   for (let i = 0; i < catalog.products.length; i += productsPerPage) {
     productChunks.push(catalog.products.slice(i, i + productsPerPage));
   }
+
+  const handleUpdateSectionTitle = (index: number, newTitle: string) => {
+    if (!onChange) return;
+    if (index === 0) {
+      onChange({
+        ...catalog,
+        featuredSectionTitle: newTitle,
+      });
+    } else {
+      onChange({
+        ...catalog,
+        regularSectionTitle: newTitle,
+      });
+    }
+  };
 
   const totalPages = 1 + productChunks.length + 1; // Cover + Product Pages + Back Cover
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -160,8 +177,13 @@ export const CatalogPreview: React.FC<CatalogPreviewProps> = ({
                   totalPages={totalPages}
                   sectionTitle={
                     index === 0
-                      ? 'Colección Destacada'
-                      : 'Velas & Aromas'
+                      ? (catalog.featuredSectionTitle || 'Colección Destacada')
+                      : (catalog.regularSectionTitle || 'Velas & Aromas')
+                  }
+                  onUpdateSectionTitle={
+                    onChange
+                      ? (newTitle) => handleUpdateSectionTitle(index, newTitle)
+                      : undefined
                   }
                   isPrintMode={isPrintMode}
                 />

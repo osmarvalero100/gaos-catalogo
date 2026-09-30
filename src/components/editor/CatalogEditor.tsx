@@ -93,6 +93,7 @@ export const CatalogEditor: React.FC<CatalogEditorProps> = ({
           <ProductListEditor
             catalog={catalog}
             onChange={handleProductsChange}
+            onUpdateCatalog={onChange}
           />
         )}
 

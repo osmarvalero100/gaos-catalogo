@@ -222,7 +222,7 @@ export default function CatalogStudioPage() {
             mobileTab === 'preview' ? 'flex' : 'hidden lg:flex'
           }`}
         >
-          <CatalogPreview catalog={catalog} />
+          <CatalogPreview catalog={catalog} onChange={handleCatalogChange} />
         </main>
       </div>
 

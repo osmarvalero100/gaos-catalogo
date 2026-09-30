@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Catalog, Product } from '../../types/catalog';
 import { VisualDimensionIndicator } from './VisualDimensionIndicator';
 import { FragranceBadgeList } from './FragranceBadgeList';
 import { ColorSwatchList } from './ColorSwatchList';
 import { IncludesBadgeList } from './IncludesBadgeList';
-import { MessageCircle, Clock, Sparkles } from 'lucide-react';
+import { MessageCircle, Clock, Sparkles, Edit2, Check } from 'lucide-react';
 
 interface CatalogProductPageProps {
   catalog: Catalog;
@@ -13,6 +13,7 @@ interface CatalogProductPageProps {
   totalPages: number;
   sectionTitle?: string;
   isPrintMode?: boolean;
+  onUpdateSectionTitle?: (newTitle: string) => void;
 }
 
 export const CatalogProductPage: React.FC<CatalogProductPageProps> = ({
@@ -22,9 +23,17 @@ export const CatalogProductPage: React.FC<CatalogProductPageProps> = ({
   totalPages,
   sectionTitle = 'Colección de Temporada',
   isPrintMode = false,
+  onUpdateSectionTitle,
 }) => {
   const { theme, contact } = catalog;
   const { palette } = theme;
+
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [tempTitle, setTempTitle] = useState(sectionTitle);
+
+  useEffect(() => {
+    setTempTitle(sectionTitle);
+  }, [sectionTitle]);
 
   const handleWhatsAppOrder = (product: Product) => {
     if (!contact.whatsapp) return;
@@ -71,12 +80,81 @@ export const CatalogProductPage: React.FC<CatalogProductPageProps> = ({
             >
               {catalog.brandName} · {catalog.seasonTag}
             </span>
-            <h2
-              className="font-serif text-lg sm:text-xl md:text-2xl font-normal uppercase tracking-wide mt-0.5"
-              style={{ color: palette.primary }}
-            >
-              {sectionTitle}
-            </h2>
+            <div className="flex items-center gap-2 mt-0.5 group">
+              {isEditingTitle && onUpdateSectionTitle && !isPrintMode ? (
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={tempTitle}
+                    autoFocus
+                    onChange={(e) => setTempTitle(e.target.value)}
+                    onBlur={() => {
+                      setIsEditingTitle(false);
+                      if (tempTitle.trim() && tempTitle !== sectionTitle) {
+                        onUpdateSectionTitle(tempTitle.trim());
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        setIsEditingTitle(false);
+                        if (tempTitle.trim() && tempTitle !== sectionTitle) {
+                          onUpdateSectionTitle(tempTitle.trim());
+                        }
+                      } else if (e.key === 'Escape') {
+                        setIsEditingTitle(false);
+                        setTempTitle(sectionTitle);
+                      }
+                    }}
+                    className="font-serif text-base sm:text-lg md:text-xl font-normal uppercase tracking-wide px-2 py-0.5 rounded border border-emerald-600 bg-white text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600 shadow-xs"
+                  />
+                  <button
+                    type="button"
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      setIsEditingTitle(false);
+                      if (tempTitle.trim() && tempTitle !== sectionTitle) {
+                        onUpdateSectionTitle(tempTitle.trim());
+                      }
+                    }}
+                    className="p-1 rounded bg-emerald-700 text-white hover:bg-emerald-800"
+                    title="Guardar título"
+                  >
+                    <Check className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <h2
+                    className={`font-serif text-lg sm:text-xl md:text-2xl font-normal uppercase tracking-wide ${
+                      onUpdateSectionTitle && !isPrintMode ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''
+                    }`}
+                    style={{ color: palette.primary }}
+                    onClick={() => {
+                      if (onUpdateSectionTitle && !isPrintMode) {
+                        setTempTitle(sectionTitle);
+                        setIsEditingTitle(true);
+                      }
+                    }}
+                    title={onUpdateSectionTitle && !isPrintMode ? 'Clic para editar título' : undefined}
+                  >
+                    {sectionTitle}
+                  </h2>
+                  {onUpdateSectionTitle && !isPrintMode && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTempTitle(sectionTitle);
+                        setIsEditingTitle(true);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded transition-all print:hidden"
+                      title="Editar título de esta sección"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
         <div className="text-right">

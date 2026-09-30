@@ -1,6 +1,6 @@
 import React from 'react';
 import { Catalog } from '../../types/catalog';
-import { BookOpen, Phone, AtSign, MapPin, Upload, Globe } from 'lucide-react';
+import { BookOpen, Phone, AtSign, MapPin, Upload, Globe, Sparkles } from 'lucide-react';
 
 interface BrandContactEditorProps {
   catalog: Catalog;
@@ -246,6 +246,55 @@ export const BrandContactEditor: React.FC<BrandContactEditorProps> = ({
                 className="w-full px-3 py-1.5 text-xs border rounded-md focus:ring-1 focus:ring-emerald-600 focus:outline-none font-mono"
               />
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Product Section Titles */}
+      <div className="space-y-4 pt-4 border-t">
+        <label className="text-xs font-bold uppercase tracking-wider text-stone-700 flex items-center gap-1.5">
+          <Sparkles className="w-4 h-4 text-emerald-700" />
+          Títulos de Secciones en el Catálogo
+        </label>
+        <p className="text-xs text-stone-500">
+          Personaliza los encabezados que aparecen en la parte superior de las páginas de velas en el catálogo.
+        </p>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold text-stone-600 mb-1">
+              Título Sección 1 (Pág. Destacada)
+            </label>
+            <input
+              type="text"
+              value={catalog.featuredSectionTitle ?? 'Colección Destacada'}
+              onChange={(e) =>
+                onChange({
+                  ...catalog,
+                  featuredSectionTitle: e.target.value,
+                })
+              }
+              placeholder="Colección Destacada"
+              className="w-full px-3 py-2 text-xs border rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-stone-600 mb-1">
+              Título Sección 2 (Catálogo General)
+            </label>
+            <input
+              type="text"
+              value={catalog.regularSectionTitle ?? 'Velas & Aromas'}
+              onChange={(e) =>
+                onChange({
+                  ...catalog,
+                  regularSectionTitle: e.target.value,
+                })
+              }
+              placeholder="Velas & Aromas"
+              className="w-full px-3 py-2 text-xs border rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none"
+            />
           </div>
         </div>
       </div>

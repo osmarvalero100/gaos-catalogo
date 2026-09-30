@@ -75,6 +75,8 @@ export interface Catalog {
   brandLogo?: string;
   coverImage: string;
   introText: string;
+  featuredSectionTitle?: string;
+  regularSectionTitle?: string;
   products: Product[];
   theme: ThemeConfig;
   contact: ContactInfo;

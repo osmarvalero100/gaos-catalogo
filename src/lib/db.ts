@@ -62,6 +62,8 @@ export async function initDatabase(): Promise<void> {
         brand_logo LONGTEXT,
         cover_image LONGTEXT,
         intro_text TEXT,
+        featured_section_title VARCHAR(255) DEFAULT 'Colección Destacada',
+        regular_section_title VARCHAR(255) DEFAULT 'Velas & Aromas',
         theme_config JSON NOT NULL,
         contact_info JSON NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -70,6 +72,20 @@ export async function initDatabase(): Promise<void> {
         INDEX idx_updated_at (updated_at)
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    // Ensure section titles columns exist in existing catalogs table
+    try {
+      const [cols] = await pool.query<mysql.RowDataPacket[]>(
+        "SHOW COLUMNS FROM catalogs LIKE 'featured_section_title'"
+      );
+      if (cols.length === 0) {
+        await pool.query(
+          "ALTER TABLE catalogs ADD COLUMN featured_section_title VARCHAR(255) DEFAULT 'Colección Destacada' AFTER intro_text, ADD COLUMN regular_section_title VARCHAR(255) DEFAULT 'Velas & Aromas' AFTER featured_section_title"
+        );
+      }
+    } catch (migErr) {
+      console.warn('Could not check or alter section titles columns in catalogs:', migErr);
+    }
 
     // Create products table
     await pool.query(`
@@ -240,6 +256,8 @@ export async function getCatalogByIdOrSlug(idOrSlug: string): Promise<Catalog | 
     brandLogo: c.brand_logo || '/gaos-candles.svg',
     coverImage: c.cover_image || '',
     introText: c.intro_text || '',
+    featuredSectionTitle: c.featured_section_title || 'Colección Destacada',
+    regularSectionTitle: c.regular_section_title || 'Velas & Aromas',
     products,
     theme,
     contact,
@@ -273,8 +291,9 @@ export async function saveCatalogToDb(catalog: Catalog): Promise<Catalog> {
       INSERT INTO catalogs (
         id, slug, title, subtitle, season_tag, edition_year,
         brand_name, brand_logo, cover_image, intro_text,
+        featured_section_title, regular_section_title,
         theme_config, contact_info, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
       ON DUPLICATE KEY UPDATE
         slug = VALUES(slug),
         title = VALUES(title),
@@ -285,6 +304,8 @@ export async function saveCatalogToDb(catalog: Catalog): Promise<Catalog> {
         brand_logo = VALUES(brand_logo),
         cover_image = VALUES(cover_image),
         intro_text = VALUES(intro_text),
+        featured_section_title = VALUES(featured_section_title),
+        regular_section_title = VALUES(regular_section_title),
         theme_config = VALUES(theme_config),
         contact_info = VALUES(contact_info),
         updated_at = NOW()
@@ -300,6 +321,8 @@ export async function saveCatalogToDb(catalog: Catalog): Promise<Catalog> {
         catalog.brandLogo || '/gaos-candles.svg',
         catalog.coverImage || '',
         catalog.introText || '',
+        catalog.featuredSectionTitle || 'Colección Destacada',
+        catalog.regularSectionTitle || 'Velas & Aromas',
         themeJson,
         contactJson,
       ]
