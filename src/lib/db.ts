@@ -146,11 +146,26 @@ export async function initDatabase(): Promise<void> {
       console.warn('Could not check or alter footer_text column in catalogs:', migErr);
     }
 
+    // Ensure product_groups column exists in existing catalogs table
+    try {
+      const [cols] = await pool.query<mysql.RowDataPacket[]>(
+        "SHOW COLUMNS FROM catalogs LIKE 'product_groups'"
+      );
+      if (cols.length === 0) {
+        await pool.query(
+          "ALTER TABLE catalogs ADD COLUMN product_groups JSON NULL AFTER footer_text"
+        );
+      }
+    } catch (migErr) {
+      console.warn('Could not check or alter product_groups column in catalogs:', migErr);
+    }
+
     // 4. Create products table
     await pool.query(`
       CREATE TABLE IF NOT EXISTS products (
         id VARCHAR(64) PRIMARY KEY,
         catalog_id VARCHAR(64) NOT NULL,
+        group_id VARCHAR(64) NULL,
         name VARCHAR(255) NOT NULL,
         sku VARCHAR(100) DEFAULT '',
         price DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
@@ -169,10 +184,23 @@ export async function initDatabase(): Promise<void> {
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         INDEX idx_catalog_sort (catalog_id, sort_order),
+        INDEX idx_group_id (group_id),
         CONSTRAINT fk_products_catalog FOREIGN KEY (catalog_id)
           REFERENCES catalogs (id) ON DELETE CASCADE ON UPDATE CASCADE
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
+
+    // Ensure group_id column exists in existing products table
+    try {
+      const [cols] = await pool.query<mysql.RowDataPacket[]>(
+        "SHOW COLUMNS FROM products LIKE 'group_id'"
+      );
+      if (cols.length === 0) {
+        await pool.query('ALTER TABLE products ADD COLUMN group_id VARCHAR(64) NULL AFTER catalog_id, ADD INDEX idx_group_id (group_id)');
+      }
+    } catch (migErr) {
+      console.warn('Could not check or alter group_id column in products:', migErr);
+    }
 
     // Ensure includes column exists in existing products table
     try {
@@ -334,10 +362,14 @@ export async function getCatalogByIdOrSlug(idOrSlug: string): Promise<Catalog | 
     burnTimeHours: p.burnTimeHours != null ? Number(p.burn_time_hours) : (p.burn_time_hours != null ? Number(p.burn_time_hours) : undefined),
     waxType: p.wax_type || undefined,
     isSeasonalSpecial: Boolean(p.is_seasonal_special),
+    groupId: p.group_id || undefined,
   }));
 
   const theme = typeof c.theme_config === 'string' ? JSON.parse(c.theme_config) : c.theme_config;
   const contact = typeof c.contact_info === 'string' ? JSON.parse(c.contact_info) : c.contact_info;
+  const productGroups = c.product_groups
+    ? (typeof c.product_groups === 'string' ? JSON.parse(c.product_groups) : c.product_groups)
+    : undefined;
 
   return {
     id: c.id,
@@ -353,6 +385,7 @@ export async function getCatalogByIdOrSlug(idOrSlug: string): Promise<Catalog | 
     featuredSectionTitle: c.featured_section_title || 'Colección Destacada',
     regularSectionTitle: c.regular_section_title || 'Velas & Aromas',
     footerText: c.footer_text || undefined,
+    productGroups,
     products,
     theme,
     contact,
@@ -403,6 +436,7 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
 
     const themeJson = JSON.stringify(catalog.theme || {});
     const contactJson = JSON.stringify(catalog.contact || {});
+    const productGroupsJson = catalog.productGroups ? JSON.stringify(catalog.productGroups) : null;
 
     // Upsert catalog record with the resolved ID
     await connection.query(
@@ -412,8 +446,8 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
         brand_name, brand_logo, cover_image, intro_text,
         user_id,
         featured_section_title, regular_section_title, footer_text,
-        theme_config, contact_info, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        product_groups, theme_config, contact_info, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
       ON DUPLICATE KEY UPDATE
         slug = VALUES(slug),
         title = VALUES(title),
@@ -428,6 +462,7 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
         featured_section_title = VALUES(featured_section_title),
         regular_section_title = VALUES(regular_section_title),
         footer_text = VALUES(footer_text),
+        product_groups = VALUES(product_groups),
         theme_config = VALUES(theme_config),
         contact_info = VALUES(contact_info),
         updated_at = NOW()
@@ -447,6 +482,7 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
         catalog.featuredSectionTitle || 'Colección Destacada',
         catalog.regularSectionTitle || 'Velas & Aromas',
         catalog.footerText !== undefined ? catalog.footerText : null,
+        productGroupsJson,
         themeJson,
         contactJson,
       ]
@@ -485,14 +521,15 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
         await connection.query(
           `
           INSERT INTO products (
-            id, catalog_id, name, sku, price, currency, description,
+            id, catalog_id, group_id, name, sku, price, currency, description,
             height_cm, width_cm, fragrances, colors, includes, image,
             burn_time_hours, wax_type, is_seasonal_special, sort_order
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
             productId,
             resolvedCatalogId,
+            p.groupId || null,
             p.name || 'Producto',
             p.sku || '',
             price,
@@ -514,6 +551,7 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
         savedProducts.push({
           ...p,
           id: productId,
+          groupId: p.groupId || undefined,
           price,
           heightCm,
           widthCm,
@@ -534,6 +572,7 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
       id: resolvedCatalogId,
       slug,
       userId: effectiveUserId ? Number(effectiveUserId) : undefined,
+      productGroups: catalog.productGroups,
       products: savedProducts,
       updatedAt: new Date().toISOString(),
     };
@@ -583,6 +622,7 @@ export async function duplicateCatalogInDb(sourceIdOrSlug: string, userId?: numb
     slug: newSlug,
     title,
     userId: userId || source.userId,
+    productGroups: source.productGroups ? JSON.parse(JSON.stringify(source.productGroups)) : undefined,
     products: source.products.map((p, idx) => ({
       ...p,
       id: `prod_${timestamp}_${idx}`,
@@ -592,3 +632,4 @@ export async function duplicateCatalogInDb(sourceIdOrSlug: string, userId?: numb
 
   return await saveCatalogToDb(duplicated, userId);
 }
+

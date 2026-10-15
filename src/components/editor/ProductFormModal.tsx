@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Product, CandleColor } from '../../types/catalog';
+import { Product, CandleColor, ProductGroup } from '../../types/catalog';
 import { VisualDimensionIndicator } from '../preview/VisualDimensionIndicator';
-import { X, Upload, Plus, Trash2, Sparkles, Image as ImageIcon, PackageCheck, Check } from 'lucide-react';
+import { X, Upload, Plus, Trash2, Sparkles, Image as ImageIcon, PackageCheck, Check, Layers } from 'lucide-react';
 
 interface ProductFormModalProps {
   product?: Product | null;
@@ -12,6 +12,8 @@ interface ProductFormModalProps {
   currencySymbol?: string;
   suggestedFragrances?: string[];
   suggestedIncludes?: string[];
+  groups?: ProductGroup[];
+  defaultGroupId?: string;
 }
 
 const DEFAULT_SUGGESTED_INCLUDES = [
@@ -42,6 +44,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   currencySymbol = '$',
   suggestedFragrances = [],
   suggestedIncludes = [],
+  groups = [],
+  defaultGroupId,
 }) => {
   const [mounted, setMounted] = useState(false);
 
@@ -51,9 +55,14 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   const generateUniqueId = () => `candle-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
+  const resolvedInitialGroupId =
+    product?.groupId ||
+    defaultGroupId ||
+    (groups && groups.length > 0 ? groups[0].id : undefined);
+
   const [formData, setFormData] = useState<Product>(
     product
-      ? { ...product, includes: product.includes || [] }
+      ? { ...product, includes: product.includes || [], groupId: resolvedInitialGroupId }
       : {
           id: generateUniqueId(),
           name: '',
@@ -73,6 +82,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           burnTimeHours: 40,
           waxType: 'Cera de Soya 100% Ecológica',
           isSeasonalSpecial: true,
+          groupId: resolvedInitialGroupId,
         }
   );
 
@@ -81,6 +91,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setFormData({
         ...product,
         includes: product.includes || [],
+        groupId: product.groupId || defaultGroupId || (groups && groups.length > 0 ? groups[0].id : undefined),
       });
     } else {
       setFormData({
@@ -102,9 +113,10 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         burnTimeHours: 40,
         waxType: 'Cera de Soya 100% Ecológica',
         isSeasonalSpecial: true,
+        groupId: defaultGroupId || (groups && groups.length > 0 ? groups[0].id : undefined),
       });
     }
-  }, [product, isOpen, currencySymbol]);
+  }, [product, isOpen, currencySymbol, defaultGroupId, groups]);
 
   const [newFragrance, setNewFragrance] = useState('');
   const [newColorName, setNewColorName] = useState('');
@@ -316,6 +328,32 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               />
             </div>
           </div>
+
+          {/* Group / Page Association */}
+          {groups && groups.length > 0 && (
+            <div className="p-3.5 bg-emerald-50/50 border border-emerald-200/80 rounded-xl space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold uppercase tracking-wider text-emerald-950 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-emerald-700" />
+                  <span>Agrupación / Título de Página *</span>
+                </label>
+                <span className="text-[10px] text-emerald-700 font-medium">
+                  Determina en qué página A4 aparecerá esta vela
+                </span>
+              </div>
+              <select
+                value={formData.groupId || groups[0]?.id || ''}
+                onChange={(e) => setFormData({ ...formData, groupId: e.target.value })}
+                className="w-full px-3 py-2 text-sm bg-white border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none font-medium text-stone-800 shadow-2xs"
+              >
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name} {g.subtitle ? `· ${g.subtitle}` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Description */}
           <div>
