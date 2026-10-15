@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Catalog } from '../types/catalog';
 import { INITIAL_CATALOG } from '../data/defaultCatalog';
 import { saveCatalogToStorage, getCatalogFromStorage } from '../lib/storage';
+import { shrinkCatalogForSave, getCatalogPayloadSize, MAX_SAVE_PAYLOAD_BYTES } from '../lib/imageCompression';
 import { HeaderNavbar } from '../components/shared/HeaderNavbar';
 import { CatalogEditor } from '../components/editor/CatalogEditor';
 import { CatalogPreview } from '../components/preview/CatalogPreview';
@@ -181,10 +182,24 @@ export default function CatalogStudioPage() {
 
     // 2. Persist to MySQL database (gaos_catalogo)
     try {
+      // Vercel rejects request bodies > 4.5 MB, so recompress embedded images if needed
+      const catalogToSave = await shrinkCatalogForSave(catalog);
+      if (catalogToSave !== catalog) {
+        saveCatalogToStorage(catalogToSave);
+      }
+      const payloadSize = getCatalogPayloadSize(catalogToSave);
+      if (payloadSize > MAX_SAVE_PAYLOAD_BYTES) {
+        const sizeMb = (payloadSize / (1024 * 1024)).toFixed(1);
+        alert(`El catálogo pesa ${sizeMb} MB y supera el límite de 4 MB permitido para guardar.\n\nReduce la cantidad o el tamaño de las imágenes (portada y productos) e intenta de nuevo.`);
+        setSaveMessage('Catálogo demasiado pesado');
+        setIsSaved(false);
+        return;
+      }
+
       const res = await fetch('/api/catalog', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(catalog),
+        body: JSON.stringify(catalogToSave),
       });
 
       if (res.ok) {
@@ -207,6 +222,12 @@ export default function CatalogStudioPage() {
         }, 3500);
       } else {
         const errData = await res.json().catch(() => ({}));
+        if (res.status === 413) {
+          alert('El catálogo es demasiado pesado para guardarse (límite del servidor: 4.5 MB). Reduce el tamaño o la cantidad de imágenes e intenta de nuevo.\n\nSe mantuvo una copia en tu navegador.');
+          setSaveMessage('Catálogo demasiado pesado');
+          setIsSaved(false);
+          return;
+        }
         if (res.status === 401) {
           window.location.href = '/login';
           return;
@@ -216,7 +237,7 @@ export default function CatalogStudioPage() {
           setSaveMessage('Sin permisos de edición');
           return;
         }
-        const errorDetail = errData.error || errData.details || 'Error desconocido al guardar en la base de datos MySQL.';
+        const errorDetail = errData.error || errData.details || `Error desconocido al guardar en la base de datos MySQL (HTTP ${res.status}).`;
         alert(`No se pudo guardar en la base de datos MySQL:\n\n${errorDetail}\n\nSe mantuvo una copia en tu navegador. Por favor reintenta guardar para asegurar que quede en MySQL.`);
         setSaveMessage('Error en MySQL (reintentar)');
         setIsSaved(false);
