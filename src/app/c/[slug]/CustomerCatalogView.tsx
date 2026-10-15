@@ -123,8 +123,13 @@ export function CustomerCatalogView({ initialCatalog, slug: propSlug }: Customer
   const handleOrderWhatsApp = (product: Product) => {
     if (!catalog.contact.whatsapp) return;
     const phone = catalog.contact.whatsapp.replace(/[^0-9]/g, '');
+    const hasDiscount = Boolean(product.originalPrice && product.originalPrice > product.price);
+    const priceText = hasDiscount
+      ? `${catalog.theme.currencySymbol}${product.price.toLocaleString()} (Precio anterior: ~${catalog.theme.currencySymbol}${product.originalPrice!.toLocaleString()}~, ${Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)}% OFF)`
+      : `${catalog.theme.currencySymbol}${product.price.toLocaleString()}`;
+
     const message = encodeURIComponent(
-      `¡Hola! Vi el catálogo "${catalog.title}" y deseo ordenar la vela: *${product.name}* (${catalog.theme.currencySymbol}${product.price.toLocaleString()}). ¿Podrían darme más información?`
+      `¡Hola! Vi el catálogo "${catalog.title}" y deseo ordenar la vela: *${product.name}* (${priceText}). ¿Podrían darme más información?`
     );
     window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
   };
@@ -448,9 +453,14 @@ export function CustomerCatalogView({ initialCatalog, slug: propSlug }: Customer
                                 alt={candle.name}
                                 className="w-full h-full object-cover group-hover:scale-103 transition-transform duration-500"
                               />
+                              {candle.originalPrice && candle.originalPrice > candle.price && (
+                                <span className="absolute top-2.5 left-2.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider bg-rose-600 text-white shadow-md z-10">
+                                  {candle.discountLabel || `-${Math.round(((candle.originalPrice - candle.price) / candle.originalPrice) * 100)}% OFF`}
+                                </span>
+                              )}
                               {candle.isSeasonalSpecial && (
                                 <span
-                                  className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white shadow-xs"
+                                  className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider text-white shadow-xs z-10"
                                   style={{ backgroundColor: catalog.theme.palette.primary }}
                                 >
                                   Edición Especial
@@ -467,13 +477,27 @@ export function CustomerCatalogView({ initialCatalog, slug: propSlug }: Customer
                                 >
                                   {candle.name}
                                 </h4>
-                                <span
-                                  className="font-serif text-base font-bold"
-                                  style={{ color: catalog.theme.palette.accent }}
-                                >
-                                  {catalog.theme.currencySymbol}
-                                  {candle.price.toLocaleString()}
-                                </span>
+                                <div className="flex flex-col items-end shrink-0">
+                                  {candle.originalPrice && candle.originalPrice > candle.price && (
+                                    <span className="text-xs line-through text-stone-400 font-serif leading-none mb-0.5">
+                                      {catalog.theme.currencySymbol}{candle.originalPrice.toLocaleString()}
+                                    </span>
+                                  )}
+                                  <div className="flex items-center gap-1.5">
+                                    <span
+                                      className="font-serif text-base font-bold"
+                                      style={{ color: catalog.theme.palette.accent }}
+                                    >
+                                      {catalog.theme.currencySymbol}
+                                      {candle.price.toLocaleString()}
+                                    </span>
+                                    {candle.originalPrice && candle.originalPrice > candle.price && (
+                                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-rose-100 text-rose-700">
+                                        -{Math.round(((candle.originalPrice - candle.price) / candle.originalPrice) * 100)}%
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
                               </div>
                               {candle.sku && (
                                 <span className="text-[10px] font-mono uppercase text-stone-400">

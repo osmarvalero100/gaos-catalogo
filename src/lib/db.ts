@@ -169,6 +169,7 @@ export async function initDatabase(): Promise<void> {
         name VARCHAR(255) NOT NULL,
         sku VARCHAR(100) DEFAULT '',
         price DECIMAL(12, 2) NOT NULL DEFAULT 0.00,
+        original_price DECIMAL(12, 2) NULL DEFAULT NULL,
         currency VARCHAR(10) DEFAULT '$',
         description TEXT,
         height_cm DECIMAL(6, 2) DEFAULT 0.00,
@@ -180,6 +181,7 @@ export async function initDatabase(): Promise<void> {
         burn_time_hours INT DEFAULT NULL,
         wax_type VARCHAR(100) DEFAULT '',
         is_seasonal_special TINYINT(1) DEFAULT 0,
+        discount_label VARCHAR(100) NULL DEFAULT NULL,
         sort_order INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -212,6 +214,30 @@ export async function initDatabase(): Promise<void> {
       }
     } catch (migErr) {
       console.warn('Could not check or alter includes column:', migErr);
+    }
+
+    // Ensure original_price column exists in existing products table
+    try {
+      const [cols] = await pool.query<mysql.RowDataPacket[]>(
+        "SHOW COLUMNS FROM products LIKE 'original_price'"
+      );
+      if (cols.length === 0) {
+        await pool.query('ALTER TABLE products ADD COLUMN original_price DECIMAL(12, 2) NULL DEFAULT NULL AFTER price');
+      }
+    } catch (migErr) {
+      console.warn('Could not check or alter original_price column:', migErr);
+    }
+
+    // Ensure discount_label column exists in existing products table
+    try {
+      const [cols] = await pool.query<mysql.RowDataPacket[]>(
+        "SHOW COLUMNS FROM products LIKE 'discount_label'"
+      );
+      if (cols.length === 0) {
+        await pool.query('ALTER TABLE products ADD COLUMN discount_label VARCHAR(100) NULL DEFAULT NULL AFTER is_seasonal_special');
+      }
+    } catch (migErr) {
+      console.warn('Could not check or alter discount_label column:', migErr);
     }
 
     // 5. Ensure default user gaos.storeco@gmail.com exists (Password: G40sC@ndles)
@@ -351,6 +377,8 @@ export async function getCatalogByIdOrSlug(idOrSlug: string): Promise<Catalog | 
     name: p.name,
     sku: p.sku || undefined,
     price: Number(p.price || 0),
+    originalPrice: p.original_price != null && Number(p.original_price) > 0 ? Number(p.original_price) : undefined,
+    discountLabel: p.discount_label || undefined,
     currency: p.currency || '$',
     description: p.description || '',
     heightCm: Number(p.height_cm || 0),
@@ -508,6 +536,10 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
         seenProductIds.add(productId);
 
         const price = Number.isFinite(Number(p.price)) ? Number(p.price) : 0;
+        const originalPrice = (p.originalPrice != null && Number.isFinite(Number(p.originalPrice)) && Number(p.originalPrice) > price)
+          ? Number(p.originalPrice)
+          : null;
+        const discountLabel = p.discountLabel ? p.discountLabel.trim() : null;
         const heightCm = Number.isFinite(Number(p.heightCm)) ? Number(p.heightCm) : 0;
         const widthCm = Number.isFinite(Number(p.widthCm)) ? Number(p.widthCm) : 0;
         const burnTimeHours = (p.burnTimeHours != null && Number.isFinite(Number(p.burnTimeHours))) ? Number(p.burnTimeHours) : null;
@@ -521,10 +553,10 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
         await connection.query(
           `
           INSERT INTO products (
-            id, catalog_id, group_id, name, sku, price, currency, description,
+            id, catalog_id, group_id, name, sku, price, original_price, currency, description,
             height_cm, width_cm, fragrances, colors, includes, image,
-            burn_time_hours, wax_type, is_seasonal_special, sort_order
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            burn_time_hours, wax_type, is_seasonal_special, discount_label, sort_order
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
             productId,
@@ -533,6 +565,7 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
             p.name || 'Producto',
             p.sku || '',
             price,
+            originalPrice,
             p.currency || '$',
             p.description || '',
             heightCm,
@@ -544,6 +577,7 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
             burnTimeHours,
             waxType,
             isSeasonalSpecial ? 1 : 0,
+            discountLabel,
             i,
           ]
         );
@@ -553,6 +587,8 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
           id: productId,
           groupId: p.groupId || undefined,
           price,
+          originalPrice: originalPrice ?? undefined,
+          discountLabel: discountLabel ?? undefined,
           heightCm,
           widthCm,
           burnTimeHours: burnTimeHours ?? undefined,

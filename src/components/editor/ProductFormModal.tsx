@@ -2,18 +2,29 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Product, CandleColor, ProductGroup } from '../../types/catalog';
 import { VisualDimensionIndicator } from '../preview/VisualDimensionIndicator';
-import { X, Upload, Plus, Trash2, Sparkles, Image as ImageIcon, PackageCheck, Check, Layers } from 'lucide-react';
+import { X, Upload, Plus, Trash2, Sparkles, Image as ImageIcon, PackageCheck, Check, Layers, Tag, Percent, BadgePercent, Globe } from 'lucide-react';
+
+export interface DiscountScopeAction {
+  scope: 'single' | 'group' | 'catalog';
+  percent: number;
+  fixedDiscount?: number;
+  discountType: 'percentage' | 'fixedPrice';
+  targetGroupId?: string;
+  label?: string;
+  removeDiscount?: boolean;
+}
 
 interface ProductFormModalProps {
   product?: Product | null;
   isOpen: boolean;
   onClose: () => void;
-  onSave: (product: Product) => void;
+  onSave: (product: Product, discountAction?: DiscountScopeAction) => void;
   currencySymbol?: string;
   suggestedFragrances?: string[];
   suggestedIncludes?: string[];
   groups?: ProductGroup[];
   defaultGroupId?: string;
+  allProducts?: Product[];
 }
 
 const DEFAULT_SUGGESTED_INCLUDES = [
@@ -46,6 +57,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   suggestedIncludes = [],
   groups = [],
   defaultGroupId,
+  allProducts = [],
 }) => {
   const [mounted, setMounted] = useState(false);
 
@@ -59,6 +71,22 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     product?.groupId ||
     defaultGroupId ||
     (groups && groups.length > 0 ? groups[0].id : undefined);
+
+  // Discount state
+  const hasInitialDiscount = Boolean(product?.originalPrice && product.originalPrice > product.price);
+  const initialRegularPrice = hasInitialDiscount ? (product?.originalPrice || 35000) : (product?.price || 35000);
+  const initialDiscountedPrice = hasInitialDiscount ? product!.price : Math.round(initialRegularPrice * 0.8);
+  const initialDiscountPercent = hasInitialDiscount
+    ? Math.max(1, Math.min(99, Math.round(((initialRegularPrice - product!.price) / initialRegularPrice) * 100)))
+    : 20;
+
+  const [regularPrice, setRegularPrice] = useState<number>(initialRegularPrice);
+  const [hasDiscount, setHasDiscount] = useState<boolean>(hasInitialDiscount);
+  const [discountType, setDiscountType] = useState<'percentage' | 'fixedPrice'>('percentage');
+  const [discountPercent, setDiscountPercent] = useState<number>(initialDiscountPercent);
+  const [discountedPrice, setDiscountedPrice] = useState<number>(initialDiscountedPrice);
+  const [discountLabel, setDiscountLabel] = useState<string>(product?.discountLabel || '');
+  const [discountScope, setDiscountScope] = useState<'single' | 'group' | 'catalog'>('single');
 
   const [formData, setFormData] = useState<Product>(
     product
@@ -87,9 +115,25 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   );
 
   useEffect(() => {
+    const hasInitDiscount = Boolean(product?.originalPrice && product.originalPrice > product.price);
+    const regPrice = hasInitDiscount ? (product?.originalPrice || 35000) : (product ? product.price : 35000);
+    const discPrice = hasInitDiscount ? product!.price : Math.round(regPrice * 0.8);
+    const discPct = hasInitDiscount
+      ? Math.max(1, Math.min(99, Math.round(((regPrice - product!.price) / regPrice) * 100)))
+      : 20;
+
+    setRegularPrice(regPrice);
+    setHasDiscount(hasInitDiscount);
+    setDiscountType('percentage');
+    setDiscountPercent(discPct);
+    setDiscountedPrice(discPrice);
+    setDiscountLabel(product?.discountLabel || '');
+    setDiscountScope('single');
+
     if (product) {
       setFormData({
         ...product,
+        price: hasInitDiscount ? product.price : regPrice,
         includes: product.includes || [],
         groupId: product.groupId || defaultGroupId || (groups && groups.length > 0 ? groups[0].id : undefined),
       });
@@ -117,6 +161,42 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       });
     }
   }, [product, isOpen, currencySymbol, defaultGroupId, groups]);
+
+  const handleRegularPriceChange = (val: number) => {
+    const safeVal = Math.max(0, val);
+    setRegularPrice(safeVal);
+    if (hasDiscount) {
+      if (discountType === 'percentage') {
+        setDiscountedPrice(Math.max(0, Math.round(safeVal * (1 - discountPercent / 100))));
+      } else {
+        if (discountedPrice >= safeVal) {
+          setDiscountedPrice(Math.max(0, Math.round(safeVal * 0.8)));
+        }
+      }
+    }
+  };
+
+  const handleToggleDiscount = (enabled: boolean) => {
+    setHasDiscount(enabled);
+    if (enabled) {
+      setDiscountedPrice(Math.max(0, Math.round(regularPrice * (1 - discountPercent / 100))));
+    }
+  };
+
+  const handleDiscountPercentChange = (pct: number) => {
+    const safePct = Math.max(1, Math.min(99, pct));
+    setDiscountPercent(safePct);
+    setDiscountedPrice(Math.max(0, Math.round(regularPrice * (1 - safePct / 100))));
+  };
+
+  const handleDiscountedPriceChange = (val: number) => {
+    const safeVal = Math.max(0, val);
+    setDiscountedPrice(safeVal);
+    if (regularPrice > 0 && safeVal < regularPrice) {
+      const calcPct = Math.round(((regularPrice - safeVal) / regularPrice) * 100);
+      setDiscountPercent(Math.max(1, Math.min(99, calcPct)));
+    }
+  };
 
   const [newFragrance, setNewFragrance] = useState('');
   const [newColorName, setNewColorName] = useState('');
@@ -238,11 +318,17 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     e.preventDefault();
     if (!formData.name.trim()) return;
 
+    const finalSellingPrice = hasDiscount ? Math.max(0, discountedPrice) : Math.max(0, regularPrice);
+    const finalOriginalPrice = hasDiscount && regularPrice > discountedPrice ? Math.max(0, regularPrice) : undefined;
+    const finalDiscountLabel = hasDiscount && discountLabel.trim() ? discountLabel.trim() : undefined;
+
     const sanitizedProduct: Product = {
       ...formData,
       name: formData.name.trim(),
       sku: (formData.sku || '').trim(),
-      price: Number.isFinite(Number(formData.price)) ? Math.max(0, Number(formData.price)) : 0,
+      price: finalSellingPrice,
+      originalPrice: finalOriginalPrice,
+      discountLabel: finalDiscountLabel,
       heightCm: Number.isFinite(Number(formData.heightCm)) ? Math.max(0, Number(formData.heightCm)) : 0,
       widthCm: Number.isFinite(Number(formData.widthCm)) ? Math.max(0, Number(formData.widthCm)) : 0,
       burnTimeHours: (formData.burnTimeHours != null && Number.isFinite(Number(formData.burnTimeHours))) ? Math.max(0, Number(formData.burnTimeHours)) : undefined,
@@ -251,9 +337,23 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       includes: Array.isArray(formData.includes) ? formData.includes : [],
     };
 
-    onSave(sanitizedProduct);
+    onSave(sanitizedProduct, {
+      scope: discountScope,
+      percent: hasDiscount ? discountPercent : 0,
+      fixedDiscount: hasDiscount ? Math.max(0, regularPrice - discountedPrice) : 0,
+      discountType,
+      targetGroupId: sanitizedProduct.groupId,
+      label: finalDiscountLabel,
+      removeDiscount: !hasDiscount,
+    });
     onClose();
   };
+
+  const currentGroupId = formData.groupId || groups[0]?.id;
+  const currentGroup = groups.find((g) => g.id === currentGroupId);
+  const currentGroupName = currentGroup?.name || 'Grupo actual';
+  const groupProductsCount = (allProducts || []).filter((p) => (p.groupId || groups[0]?.id) === currentGroupId).length;
+  const totalProductsCount = (allProducts || []).length;
 
   if (!isOpen || !mounted) return null;
 
@@ -270,7 +370,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               {product ? 'Editar Vela' : 'Nueva Vela Artesanal'}
             </h2>
             <p className="text-xs text-stone-500">
-              Configura nombre, medidas visuales, precio, fragancias, colores y qué incluye.
+              Configura nombre, precio, descuentos especiales, silueta visual, fragancias y colores.
             </p>
           </div>
           <button
@@ -314,19 +414,389 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
             </div>
 
             <div className="md:col-span-3">
-              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
-                Precio ({currencySymbol}) *
+              <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1 flex items-center justify-between">
+                <span>Precio Base ({currencySymbol}) *</span>
+                {hasDiscount && (
+                  <span className="text-[10px] text-rose-600 font-semibold lowercase">
+                    (tachado)
+                  </span>
+                )}
               </label>
               <input
                 type="number"
                 required
                 min="0"
                 step="500"
-                value={formData.price}
-                onChange={(e) => setFormData({ ...formData, price: Number(e.target.value) })}
+                value={regularPrice}
+                onChange={(e) => handleRegularPriceChange(Number(e.target.value))}
                 className="w-full px-3 py-2 text-sm font-semibold border rounded-lg focus:ring-2 focus:ring-emerald-600 focus:outline-none"
               />
             </div>
+          </div>
+
+          {/* ============================================================== */}
+          {/* SECTION: DESCUENTOS ESPECIALES & OFERTAS (PRECIO TACHADO)     */}
+          {/* ============================================================== */}
+          <div className={`p-4 rounded-xl border transition-all duration-200 ${
+            hasDiscount
+              ? 'bg-gradient-to-br from-rose-50/70 via-amber-50/30 to-stone-50 border-rose-300 shadow-xs'
+              : 'bg-stone-50/70 border-stone-200'
+          }`}>
+            {/* Section Header with Toggle */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pb-2.5 border-b border-stone-200/80">
+              <div className="flex items-center gap-2.5">
+                <div className={`p-1.5 rounded-lg ${hasDiscount ? 'bg-rose-600 text-white shadow-xs' : 'bg-stone-200 text-stone-600'}`}>
+                  <BadgePercent className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-stone-900">
+                      Descuento Especial & Precio Anterior Tachado
+                    </span>
+                    {hasDiscount && (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-600 text-white shadow-2xs">
+                        Activo
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-stone-500">
+                    Muestra el precio anterior tachado ({currencySymbol}{regularPrice.toLocaleString()}) para resaltar la rebaja especial.
+                  </p>
+                </div>
+              </div>
+
+              {/* Toggle Switch */}
+              <label className="relative inline-flex items-center cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={hasDiscount}
+                  onChange={(e) => handleToggleDiscount(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-stone-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-stone-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-rose-600 shadow-inner"></div>
+                <span className="ml-2 text-xs font-bold text-stone-700">
+                  {hasDiscount ? 'Descuento Activado' : 'Activar Descuento'}
+                </span>
+              </label>
+            </div>
+
+            {/* Discount Configuration Body (Expanded when active) */}
+            {hasDiscount && (
+              <div className="pt-3 space-y-4 animate-in fade-in duration-200">
+                <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-start">
+                  {/* Left Column: Mode, Inputs & Chips */}
+                  <div className="md:col-span-7 space-y-3">
+                    {/* Mode Selector */}
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-600 mb-1">
+                        Método de Descuento
+                      </label>
+                      <div className="flex items-center bg-stone-200/70 p-0.5 rounded-lg text-xs font-semibold">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDiscountType('percentage');
+                            setDiscountedPrice(Math.max(0, Math.round(regularPrice * (1 - discountPercent / 100))));
+                          }}
+                          className={`flex-1 py-1.5 px-3 rounded-md flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            discountType === 'percentage'
+                              ? 'bg-white text-stone-900 shadow-2xs font-bold'
+                              : 'text-stone-600 hover:text-stone-900'
+                          }`}
+                        >
+                          <Percent className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Porcentaje (%)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setDiscountType('fixedPrice')}
+                          className={`flex-1 py-1.5 px-3 rounded-md flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                            discountType === 'fixedPrice'
+                              ? 'bg-white text-stone-900 shadow-2xs font-bold'
+                              : 'text-stone-600 hover:text-stone-900'
+                          }`}
+                        >
+                          <Tag className="w-3.5 h-3.5 text-emerald-700" />
+                          <span>Precio Final Fijo ({currencySymbol})</span>
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* If Percentage */}
+                    {discountType === 'percentage' ? (
+                      <div className="space-y-2">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-600">
+                          Porcentaje de Descuento
+                        </label>
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <input
+                              type="number"
+                              min="1"
+                              max="99"
+                              value={discountPercent}
+                              onChange={(e) => handleDiscountPercentChange(Number(e.target.value))}
+                              className="w-full px-3 py-2 text-sm font-bold border rounded-lg focus:ring-2 focus:ring-rose-500 focus:outline-none bg-white pr-8 text-rose-700"
+                            />
+                            <span className="absolute right-3 top-2.5 text-xs font-bold text-stone-400 font-mono">%</span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            {[10, 15, 20, 25, 30, 50].map((pct) => (
+                              <button
+                                key={pct}
+                                type="button"
+                                onClick={() => handleDiscountPercentChange(pct)}
+                                className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                                  discountPercent === pct
+                                    ? 'bg-rose-600 text-white shadow-2xs scale-105'
+                                    : 'bg-white hover:bg-stone-100 text-stone-700 border border-stone-200'
+                                }`}
+                              >
+                                {pct}%
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      /* If Fixed Discounted Price */
+                      <div className="space-y-1">
+                        <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-600">
+                          Nuevo Precio de Venta con Descuento ({currencySymbol})
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          step="500"
+                          value={discountedPrice}
+                          onChange={(e) => handleDiscountedPriceChange(Number(e.target.value))}
+                          className="w-full px-3 py-2 text-sm font-bold border rounded-lg focus:ring-2 focus:ring-rose-500 focus:outline-none bg-white text-emerald-800"
+                        />
+                        <p className="text-[10px] text-stone-500">
+                          El precio regular ({currencySymbol}{regularPrice.toLocaleString()}) aparecerá tachado en el catálogo.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Promotional Tag / Badge */}
+                    <div>
+                      <label className="block text-[11px] font-bold uppercase tracking-wider text-stone-600 mb-1">
+                        Insignia / Etiqueta Promocional (Opcional)
+                      </label>
+                      <input
+                        type="text"
+                        value={discountLabel}
+                        onChange={(e) => setDiscountLabel(e.target.value)}
+                        placeholder={`Ej. -${discountPercent}% OFF, OFERTA ESPECIAL, LIQUIDACIÓN`}
+                        className="w-full px-3 py-1.5 text-xs border rounded-lg focus:ring-1 focus:ring-rose-500 focus:outline-none bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Right Column: Live Strikethrough Preview Card */}
+                  <div className="md:col-span-5 bg-white p-3.5 rounded-xl border border-rose-200/90 shadow-2xs flex flex-col justify-between">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block mb-2">
+                      Vista Previa de Precios en el Catálogo
+                    </span>
+
+                    <div className="p-3 bg-stone-50 rounded-lg border border-dashed border-stone-200 text-center space-y-1.5">
+                      <span className="inline-block px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-wider bg-rose-600 text-white uppercase shadow-xs mb-1">
+                        {discountLabel.trim() || `-${discountPercent}% OFF`}
+                      </span>
+
+                      <div className="flex flex-col items-center justify-center">
+                        <span className="text-xs line-through text-stone-400 font-serif">
+                          Antes: {currencySymbol}{regularPrice.toLocaleString()}
+                        </span>
+                        <span className="text-lg font-serif font-bold text-stone-900">
+                          Ahora: <span className="text-rose-700">{currencySymbol}{discountedPrice.toLocaleString()}</span>
+                        </span>
+                      </div>
+
+                      <div className="pt-1.5 border-t border-stone-200 text-[11px] font-medium text-emerald-700">
+                        Ahorro cliente: {currencySymbol}{(Math.max(0, regularPrice - discountedPrice)).toLocaleString()} ({discountPercent}%)
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ámbito de Aplicación (Scope Selector) */}
+                <div className="pt-3 border-t border-stone-200/80 space-y-2">
+                  <div>
+                    <span className="text-xs font-bold uppercase tracking-wider text-stone-800 flex items-center gap-1.5">
+                      <Layers className="w-3.5 h-3.5 text-stone-600" />
+                      <span>Ámbito de Aplicación (¿A qué productos se aplica?)</span>
+                    </span>
+                    <p className="text-[11px] text-stone-500">
+                      Elige si este descuento especial se aplica solo a esta vela, a todas las de este grupo o a todo el catálogo.
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {/* Option 1: Solo este producto */}
+                    <button
+                      type="button"
+                      onClick={() => setDiscountScope('single')}
+                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+                        discountScope === 'single'
+                          ? 'bg-white border-rose-500 ring-2 ring-rose-500/30 shadow-xs'
+                          : 'bg-white/80 border-stone-200 hover:bg-white hover:border-stone-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="p-1.5 rounded-lg bg-stone-100 text-stone-700">
+                          <Tag className="w-3.5 h-3.5" />
+                        </span>
+                        <input
+                          type="radio"
+                          name="discountScope"
+                          checked={discountScope === 'single'}
+                          onChange={() => setDiscountScope('single')}
+                          className="text-rose-600 focus:ring-rose-500"
+                        />
+                      </div>
+                      <span className="text-xs font-bold text-stone-900 block">Solo este producto</span>
+                      <span className="text-[10px] text-stone-500 leading-tight mt-0.5">
+                        Aplica únicamente a esta vela
+                      </span>
+                    </button>
+
+                    {/* Option 2: A todo el grupo actual */}
+                    <button
+                      type="button"
+                      onClick={() => setDiscountScope('group')}
+                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+                        discountScope === 'group'
+                          ? 'bg-white border-rose-500 ring-2 ring-rose-500/30 shadow-xs'
+                          : 'bg-white/80 border-stone-200 hover:bg-white hover:border-stone-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="p-1.5 rounded-lg bg-emerald-100 text-emerald-800">
+                          <Layers className="w-3.5 h-3.5" />
+                        </span>
+                        <input
+                          type="radio"
+                          name="discountScope"
+                          checked={discountScope === 'group'}
+                          onChange={() => setDiscountScope('group')}
+                          className="text-rose-600 focus:ring-rose-500"
+                        />
+                      </div>
+                      <span className="text-xs font-bold text-stone-900 block truncate" title={currentGroupName}>
+                        A todo este grupo
+                      </span>
+                      <span className="text-[10px] text-stone-500 leading-tight mt-0.5 truncate">
+                        {currentGroupName} ({groupProductsCount} {groupProductsCount === 1 ? 'vela' : 'velas'})
+                      </span>
+                    </button>
+
+                    {/* Option 3: A todo el catálogo */}
+                    <button
+                      type="button"
+                      onClick={() => setDiscountScope('catalog')}
+                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between cursor-pointer ${
+                        discountScope === 'catalog'
+                          ? 'bg-white border-rose-500 ring-2 ring-rose-500/30 shadow-xs'
+                          : 'bg-white/80 border-stone-200 hover:bg-white hover:border-stone-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="p-1.5 rounded-lg bg-amber-100 text-amber-800">
+                          <Globe className="w-3.5 h-3.5" />
+                        </span>
+                        <input
+                          type="radio"
+                          name="discountScope"
+                          checked={discountScope === 'catalog'}
+                          onChange={() => setDiscountScope('catalog')}
+                          className="text-rose-600 focus:ring-rose-500"
+                        />
+                      </div>
+                      <span className="text-xs font-bold text-stone-900 block">Todo el catálogo</span>
+                      <span className="text-[10px] text-stone-500 leading-tight mt-0.5">
+                        Todas las páginas ({totalProductsCount} velas)
+                      </span>
+                    </button>
+                  </div>
+
+                  {discountScope !== 'single' && (
+                    <div className="p-2.5 bg-rose-50 border border-rose-200 rounded-lg text-xs text-rose-900 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>
+                        {discountScope === 'group'
+                          ? `Al guardar, el ${discountPercent}% de descuento se aplicará a todas las ${groupProductsCount} velas de "${currentGroupName}".`
+                          : `Al guardar, el ${discountPercent}% de descuento se aplicará a todas las ${totalProductsCount} velas del catálogo completo.`
+                        }
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* If discount is turned OFF, but user wants to remove discounts from the whole group or catalog */}
+            {!hasDiscount && (
+              <div className="pt-2 flex flex-wrap items-center justify-between gap-2 text-xs">
+                <span className="text-stone-500 text-[11px]">
+                  Sin descuento activo en esta vela.
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm(`¿Deseas remover los descuentos de todas las velas en "${currentGroupName}"?`)) {
+                        onSave(
+                          {
+                            ...formData,
+                            price: regularPrice,
+                            originalPrice: undefined,
+                            discountLabel: undefined,
+                          },
+                          {
+                            scope: 'group',
+                            percent: 0,
+                            targetGroupId: currentGroupId,
+                            discountType: 'percentage',
+                            removeDiscount: true,
+                          }
+                        );
+                        onClose();
+                      }
+                    }}
+                    className="text-[11px] text-stone-600 hover:text-stone-900 underline font-medium cursor-pointer"
+                  >
+                    Quitar descuentos a este grupo
+                  </button>
+                  <span className="text-stone-300">·</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (confirm('¿Deseas remover los descuentos de todo el catálogo completo?')) {
+                        onSave(
+                          {
+                            ...formData,
+                            price: regularPrice,
+                            originalPrice: undefined,
+                            discountLabel: undefined,
+                          },
+                          {
+                            scope: 'catalog',
+                            percent: 0,
+                            discountType: 'percentage',
+                            removeDiscount: true,
+                          }
+                        );
+                        onClose();
+                      }
+                    }}
+                    className="text-[11px] text-stone-600 hover:text-stone-900 underline font-medium cursor-pointer"
+                  >
+                    Quitar a todo el catálogo
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Group / Page Association */}

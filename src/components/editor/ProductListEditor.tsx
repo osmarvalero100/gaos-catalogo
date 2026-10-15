@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Product, Catalog, ProductGroup } from '../../types/catalog';
-import { ProductFormModal } from './ProductFormModal';
+import { ProductFormModal, DiscountScopeAction } from './ProductFormModal';
 import {
   Plus,
   Edit2,
@@ -16,6 +17,10 @@ import {
   Check,
   X,
   MoveRight,
+  BadgePercent,
+  Tag,
+  Percent,
+  Globe,
 } from 'lucide-react';
 import { SEASONAL_PRESETS } from '../../data/seasonalThemes';
 import { normalizeProductGroups, getGroupedProducts } from '../../lib/catalogGroups';
@@ -37,6 +42,12 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
   hasUnsavedChanges = false,
   isSaving = false,
 }) => {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [modalDefaultGroupId, setModalDefaultGroupId] = useState<string | undefined>(undefined);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -84,7 +95,52 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
     }
   };
 
-  const handleSaveProduct = (savedProduct: Product) => {
+  // Quick discount modal state
+  const [discountModalTarget, setDiscountModalTarget] = useState<'catalog' | string | null>(null);
+  const [quickDiscountPercent, setQuickDiscountPercent] = useState<number>(20);
+  const [quickDiscountLabel, setQuickDiscountLabel] = useState<string>('');
+
+  const handleApplyQuickDiscount = (target: 'catalog' | string, percent: number, label?: string) => {
+    const isCatalog = target === 'catalog';
+    const updatedProducts = catalog.products.map((p) => {
+      const matches = isCatalog || (p.groupId === target);
+      if (!matches) return p;
+
+      const basePrice = (p.originalPrice && p.originalPrice > p.price) ? p.originalPrice : p.price;
+      const discounted = Math.max(0, Math.round(basePrice * (1 - percent / 100)));
+      return {
+        ...p,
+        price: discounted,
+        originalPrice: basePrice,
+        discountLabel: label?.trim() || undefined,
+      };
+    });
+    syncCatalog(updatedProducts);
+    setDiscountModalTarget(null);
+  };
+
+  const handleRemoveQuickDiscount = (target: 'catalog' | string) => {
+    const isCatalog = target === 'catalog';
+    const updatedProducts = catalog.products.map((p) => {
+      const matches = isCatalog || (p.groupId === target);
+      if (!matches) return p;
+
+      const restoredPrice = (p.originalPrice && p.originalPrice > p.price) ? p.originalPrice : p.price;
+      return {
+        ...p,
+        price: restoredPrice,
+        originalPrice: undefined,
+        discountLabel: undefined,
+      };
+    });
+    syncCatalog(updatedProducts);
+    setDiscountModalTarget(null);
+  };
+
+  const handleSaveProduct = (
+    savedProduct: Product,
+    discountAction?: DiscountScopeAction
+  ) => {
     // Ensure product has a valid groupId
     const finalProduct: Product = {
       ...savedProduct,
@@ -96,6 +152,47 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
       updatedProducts = catalog.products.map((p) => (p.id === finalProduct.id ? finalProduct : p));
     } else {
       updatedProducts = [...catalog.products, finalProduct];
+    }
+
+    if (discountAction && discountAction.scope !== 'single') {
+      const isCatalog = discountAction.scope === 'catalog';
+      const targetGroupId = discountAction.targetGroupId || finalProduct.groupId;
+
+      updatedProducts = updatedProducts.map((p) => {
+        if (p.id === finalProduct.id) {
+          return finalProduct;
+        }
+
+        const matchesScope = isCatalog || (p.groupId === targetGroupId);
+        if (!matchesScope) {
+          return p;
+        }
+
+        if (discountAction.removeDiscount || discountAction.percent <= 0) {
+          const restoredPrice = (p.originalPrice && p.originalPrice > p.price) ? p.originalPrice : p.price;
+          return {
+            ...p,
+            price: restoredPrice,
+            originalPrice: undefined,
+            discountLabel: undefined,
+          };
+        }
+
+        const basePrice = (p.originalPrice && p.originalPrice > p.price) ? p.originalPrice : p.price;
+        let newPrice = basePrice;
+        if (discountAction.discountType === 'percentage' || !discountAction.fixedDiscount) {
+          newPrice = Math.max(0, Math.round(basePrice * (1 - discountAction.percent / 100)));
+        } else {
+          newPrice = Math.max(0, basePrice - discountAction.fixedDiscount);
+        }
+
+        return {
+          ...p,
+          price: newPrice,
+          originalPrice: basePrice,
+          discountLabel: discountAction.label || p.discountLabel || undefined,
+        };
+      });
     }
 
     syncCatalog(updatedProducts);
@@ -272,6 +369,16 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setDiscountModalTarget('catalog')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-800 rounded-lg text-xs font-bold transition-all border border-rose-200 cursor-pointer"
+            title="Gestionar descuentos en todo el catálogo"
+          >
+            <BadgePercent className="w-3.5 h-3.5 text-rose-600" />
+            <span>Descuento Global</span>
+          </button>
+
           <button
             type="button"
             onClick={() => setIsAddingGroup(true)}
@@ -552,6 +659,16 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
 
                   <button
                     type="button"
+                    onClick={() => setDiscountModalTarget(group.id)}
+                    className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-800 text-xs font-semibold rounded-lg flex items-center gap-1 border border-rose-200 transition-colors cursor-pointer"
+                    title={`Gestionar descuentos en "${group.name}"`}
+                  >
+                    <BadgePercent className="w-3 h-3 text-rose-600" />
+                    <span>Dcto</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => handleOpenNew(group.id)}
                     className="px-2 py-1 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold rounded-lg flex items-center gap-1 border border-stone-200 transition-colors cursor-pointer"
                     title={`Agregar vela directamente en "${group.name}"`}
@@ -636,9 +753,23 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
                               {prod.name}
                             </h5>
                             <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                              <span className="text-xs font-bold text-emerald-800">
-                                {catalog.theme.currencySymbol}{prod.price.toLocaleString()}
-                              </span>
+                              {prod.originalPrice && prod.originalPrice > prod.price ? (
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[11px] line-through text-stone-400 font-medium">
+                                    {catalog.theme.currencySymbol}{prod.originalPrice.toLocaleString()}
+                                  </span>
+                                  <span className="text-xs font-bold text-rose-700">
+                                    {catalog.theme.currencySymbol}{prod.price.toLocaleString()}
+                                  </span>
+                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-700">
+                                    -{Math.round(((prod.originalPrice - prod.price) / prod.originalPrice) * 100)}%
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-xs font-bold text-emerald-800">
+                                  {catalog.theme.currencySymbol}{prod.price.toLocaleString()}
+                                </span>
+                              )}
                               {prod.sku && (
                                 <span className="text-[10px] font-mono uppercase bg-stone-100 text-stone-600 px-1.5 py-0.2 rounded border border-stone-200">
                                   {prod.sku}
@@ -647,6 +778,11 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
                               {prod.isSeasonalSpecial && (
                                 <span className="text-[9px] uppercase font-bold tracking-wider text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
                                   Especial
+                                </span>
+                              )}
+                              {prod.originalPrice && prod.originalPrice > prod.price && prod.discountLabel && (
+                                <span className="text-[9px] uppercase font-bold tracking-wider text-rose-700 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
+                                  {prod.discountLabel}
                                 </span>
                               )}
                             </div>
@@ -741,7 +877,140 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
         suggestedIncludes={suggestedIncludes}
         groups={currentGroups}
         defaultGroupId={modalDefaultGroupId}
+        allProducts={catalog.products}
       />
+
+      {/* Quick Discount Modal for Group or Catalog */}
+      {discountModalTarget !== null && mounted && createPortal(
+        <div
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs overflow-y-auto"
+          onClick={() => setDiscountModalTarget(null)}
+        >
+          <div
+            className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl border border-stone-200 overflow-hidden animate-in fade-in zoom-in-95 duration-200 p-6 space-y-5 z-[10000]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-stone-200">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-rose-100 text-rose-700">
+                  <BadgePercent className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-stone-900">
+                    {discountModalTarget === 'catalog'
+                      ? 'Descuento Global en Todo el Catálogo'
+                      : `Descuento para "${currentGroups.find((g) => g.id === discountModalTarget)?.name || 'este grupo'}"`}
+                  </h3>
+                  <p className="text-xs text-stone-500">
+                    {discountModalTarget === 'catalog'
+                      ? `Aplica a las ${catalog.products.length} velas del catálogo`
+                      : `Aplica a las ${catalog.products.filter((p) => (p.groupId || currentGroups[0]?.id) === discountModalTarget).length} velas de este grupo`}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDiscountModalTarget(null)}
+                className="p-1 text-stone-400 hover:text-stone-700 rounded-lg hover:bg-stone-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1.5">
+                  Porcentaje de Descuento (%)
+                </label>
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="number"
+                      min="1"
+                      max="99"
+                      value={quickDiscountPercent}
+                      onChange={(e) => setQuickDiscountPercent(Math.max(1, Math.min(99, Number(e.target.value))))}
+                      className="w-full px-3 py-2 text-sm font-bold border rounded-lg focus:ring-2 focus:ring-rose-500 focus:outline-none bg-white pr-8 text-rose-700"
+                    />
+                    <span className="absolute right-3 top-2.5 text-xs font-bold text-stone-400 font-mono">%</span>
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {[10, 15, 20, 25, 30, 40, 50].map((pct) => (
+                    <button
+                      key={pct}
+                      type="button"
+                      onClick={() => setQuickDiscountPercent(pct)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        quickDiscountPercent === pct
+                          ? 'bg-rose-600 text-white shadow-2xs'
+                          : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                      }`}
+                    >
+                      {pct}%
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-stone-700 mb-1">
+                  Etiqueta Promocional (Opcional)
+                </label>
+                <input
+                  type="text"
+                  value={quickDiscountLabel}
+                  onChange={(e) => setQuickDiscountLabel(e.target.value)}
+                  placeholder={`Ej. -${quickDiscountPercent}% OFF, OFERTA, LIQUIDACIÓN`}
+                  className="w-full px-3 py-2 text-xs border rounded-lg focus:ring-2 focus:ring-rose-500 focus:outline-none bg-white"
+                />
+              </div>
+
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
+                <p className="font-semibold flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-700" />
+                  <span>¿Cómo se reflejará?</span>
+                </p>
+                <p className="text-[11px] text-amber-800">
+                  El precio regular se mostrará como precio anterior tachado (ej. ~~$50.000~~), y el nuevo precio calculado con el {quickDiscountPercent}% de descuento se mostrará destacado.
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => handleApplyQuickDiscount(discountModalTarget, quickDiscountPercent, quickDiscountLabel)}
+                className="w-full py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              >
+                <BadgePercent className="w-4 h-4" />
+                <span>Aplicar {quickDiscountPercent}% de Descuento</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleRemoveQuickDiscount(discountModalTarget)}
+                  className="flex-1 py-2 px-3 border border-stone-200 hover:bg-stone-100 text-stone-700 text-xs font-medium rounded-xl transition-colors cursor-pointer"
+                >
+                  Quitar Descuentos
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDiscountModalTarget(null)}
+                  className="py-2 px-4 text-xs font-medium text-stone-500 hover:text-stone-800 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
     </div>
   );
 };

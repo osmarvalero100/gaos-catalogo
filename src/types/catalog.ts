@@ -26,6 +26,8 @@ export interface Product {
   name: string;
   sku?: string;
   price: number;
+  originalPrice?: number;
+  discountLabel?: string;
   currency: string;
   description: string;
   heightCm: number;

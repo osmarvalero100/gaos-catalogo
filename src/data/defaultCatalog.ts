@@ -8,6 +8,8 @@ export const SAMPLE_CANDLES: Record<string, Product[]> = {
       name: 'Vela Botánica Bosque Nevado',
       sku: 'NV-01',
       price: 38000,
+      originalPrice: 48000,
+      discountLabel: '20% OFF',
       currency: '$',
       description: 'Elaborada con cera de soya 100% pura y mecha de madera crepitante. Decorada a mano con ramitas de pino silvestre, anís estrellado y escarcha dorada vegetal.',
       heightCm: 12.0,
