@@ -2,19 +2,25 @@ import React, { useState } from 'react';
 import { Product, Catalog } from '../../types/catalog';
 import { ProductFormModal } from './ProductFormModal';
 import { VisualDimensionIndicator } from '../preview/VisualDimensionIndicator';
-import { Plus, Edit2, Trash2, Copy, ArrowUp, ArrowDown, Sparkles } from 'lucide-react';
+import { Plus, Edit2, Trash2, Copy, ArrowUp, ArrowDown, Sparkles, Save, Loader2 } from 'lucide-react';
 import { SEASONAL_PRESETS } from '../../data/seasonalThemes';
 
 interface ProductListEditorProps {
   catalog: Catalog;
   onChange: (products: Product[]) => void;
   onUpdateCatalog?: (catalog: Catalog) => void;
+  onSave?: () => void;
+  hasUnsavedChanges?: boolean;
+  isSaving?: boolean;
 }
 
 export const ProductListEditor: React.FC<ProductListEditorProps> = ({
   catalog,
   onChange,
   onUpdateCatalog,
+  onSave,
+  hasUnsavedChanges = false,
+  isSaving = false,
 }) => {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -48,9 +54,12 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
   const handleDuplicate = (product: Product) => {
     const copy: Product = {
       ...product,
-      id: `candle-${Date.now()}`,
+      id: `candle-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
       name: `${product.name} (Copia)`,
       sku: `${product.sku || 'CP'}-B`,
+      fragrances: Array.isArray(product.fragrances) ? [...product.fragrances] : [],
+      colors: Array.isArray(product.colors) ? product.colors.map((c) => ({ ...c })) : [],
+      includes: Array.isArray(product.includes) ? [...product.includes] : [],
     };
     onChange([...catalog.products, copy]);
   };
@@ -92,6 +101,34 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
           <span>Agregar Vela</span>
         </button>
       </div>
+
+      {/* Notice & Quick Save if changes pending */}
+      {hasUnsavedChanges && onSave && (
+        <div className="flex items-center justify-between p-3 bg-amber-500/10 border border-amber-300 rounded-xl text-xs gap-2">
+          <div className="flex items-center gap-2 text-amber-900 font-medium">
+            <Sparkles className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>Tienes productos modificados sin guardar en la base de datos.</span>
+          </div>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={isSaving}
+            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white font-bold rounded-lg shadow-xs flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                <span>Guardando...</span>
+              </>
+            ) : (
+              <>
+                <Save className="w-3.5 h-3.5" />
+                <span>Guardar en BD</span>
+              </>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Section Titles Settings */}
       {onUpdateCatalog && (

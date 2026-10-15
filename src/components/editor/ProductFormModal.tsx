@@ -49,11 +49,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     setMounted(true);
   }, []);
 
+  const generateUniqueId = () => `candle-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
   const [formData, setFormData] = useState<Product>(
     product
       ? { ...product, includes: product.includes || [] }
       : {
-          id: `candle-${Date.now()}`,
+          id: generateUniqueId(),
           name: '',
           sku: `VEL-${Math.floor(100 + Math.random() * 900)}`,
           price: 35000,
@@ -82,7 +84,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       });
     } else {
       setFormData({
-        id: `candle-${Date.now()}`,
+        id: generateUniqueId(),
         name: '',
         sku: `VEL-${Math.floor(100 + Math.random() * 900)}`,
         price: 35000,
@@ -116,12 +118,51 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
     const reader = new FileReader();
     reader.onload = (uploadEvent) => {
-      if (uploadEvent.target?.result) {
+      const result = uploadEvent.target?.result as string;
+      if (!result) return;
+
+      // Automatically compress and resize if image is large
+      const img = new Image();
+      img.onload = () => {
+        const MAX_DIM = 1200;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > MAX_DIM || height > MAX_DIM) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIM) / width);
+            width = MAX_DIM;
+          } else {
+            width = Math.round((width * MAX_DIM) / height);
+            height = MAX_DIM;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.85);
+          setFormData((prev) => ({
+            ...prev,
+            image: compressedDataUrl,
+          }));
+        } else {
+          setFormData((prev) => ({
+            ...prev,
+            image: result,
+          }));
+        }
+      };
+      img.onerror = () => {
         setFormData((prev) => ({
           ...prev,
-          image: uploadEvent.target!.result as string,
+          image: result,
         }));
-      }
+      };
+      img.src = result;
     };
     reader.readAsDataURL(file);
   };
@@ -184,7 +225,21 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
-    onSave(formData);
+
+    const sanitizedProduct: Product = {
+      ...formData,
+      name: formData.name.trim(),
+      sku: (formData.sku || '').trim(),
+      price: Number.isFinite(Number(formData.price)) ? Math.max(0, Number(formData.price)) : 0,
+      heightCm: Number.isFinite(Number(formData.heightCm)) ? Math.max(0, Number(formData.heightCm)) : 0,
+      widthCm: Number.isFinite(Number(formData.widthCm)) ? Math.max(0, Number(formData.widthCm)) : 0,
+      burnTimeHours: (formData.burnTimeHours != null && Number.isFinite(Number(formData.burnTimeHours))) ? Math.max(0, Number(formData.burnTimeHours)) : undefined,
+      fragrances: Array.isArray(formData.fragrances) ? formData.fragrances : [],
+      colors: Array.isArray(formData.colors) ? formData.colors : [],
+      includes: Array.isArray(formData.includes) ? formData.includes : [],
+    };
+
+    onSave(sanitizedProduct);
     onClose();
   };
 

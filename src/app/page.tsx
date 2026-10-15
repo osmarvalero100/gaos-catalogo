@@ -24,6 +24,7 @@ export default function CatalogStudioPage() {
 
   const [catalog, setCatalog] = useState<Catalog>(INITIAL_CATALOG);
   const [isSaved, setIsSaved] = useState<boolean>(false);
+  const [isSaving, setIsSaving] = useState<boolean>(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState<boolean>(false);
   const [lastModifiedTime, setLastModifiedTime] = useState<number | null>(null);
   const [showInactivitySaveAlert, setShowInactivitySaveAlert] = useState<boolean>(false);
@@ -172,7 +173,10 @@ export default function CatalogStudioPage() {
   };
 
   const handleSave = async () => {
-    // 1. Save to local storage for quick cache
+    if (isSaving) return;
+    setIsSaving(true);
+
+    // 1. Save to local storage for quick offline cache
     saveCatalogToStorage(catalog);
 
     // 2. Persist to MySQL database (gaos_catalogo)
@@ -191,9 +195,16 @@ export default function CatalogStudioPage() {
         setLastModifiedTime(null);
         setShowInactivitySaveAlert(false);
 
-        if (data.catalog?.slug && data.catalog.slug !== catalog.slug) {
+        // Always sync returned catalog from MySQL (ensures IDs and timestamps are exact)
+        if (data.catalog) {
           setCatalog(data.catalog);
+          saveCatalogToStorage(data.catalog);
         }
+
+        setIsSaved(true);
+        setTimeout(() => {
+          setIsSaved(false);
+        }, 3500);
       } else {
         const errData = await res.json().catch(() => ({}));
         if (res.status === 401) {
@@ -205,16 +216,19 @@ export default function CatalogStudioPage() {
           setSaveMessage('Sin permisos de edición');
           return;
         }
-        setSaveMessage(errData.error || 'Guardado solo local');
+        const errorDetail = errData.error || errData.details || 'Error desconocido al guardar en la base de datos MySQL.';
+        alert(`No se pudo guardar en la base de datos MySQL:\n\n${errorDetail}\n\nSe mantuvo una copia en tu navegador. Por favor reintenta guardar para asegurar que quede en MySQL.`);
+        setSaveMessage('Error en MySQL (reintentar)');
+        setIsSaved(false);
       }
-    } catch {
-      setSaveMessage('Guardado en navegador');
-    }
-
-    setIsSaved(true);
-    setTimeout(() => {
+    } catch (err) {
+      console.error('Error saving to MySQL:', err);
+      alert('Error de conexión al guardar en la base de datos MySQL. Verifica tu conexión a internet y vuelve a presionar "Guardar en BD".');
+      setSaveMessage('Error de red (reintentar)');
       setIsSaved(false);
-    }, 3500);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Keyboard shortcut Ctrl+S / Cmd+S to save
@@ -312,6 +326,7 @@ export default function CatalogStudioPage() {
         onOpenCatalogManager={() => setIsCatalogManagerOpen(true)}
         onSave={handleSave}
         isSaved={isSaved}
+        isSaving={isSaving}
         hasUnsavedChanges={hasUnsavedChanges}
         saveMessage={saveMessage}
         onDownloadJson={handleDownloadJson}
@@ -357,6 +372,9 @@ export default function CatalogStudioPage() {
           <CatalogEditor
             catalog={catalog}
             onChange={handleCatalogChange}
+            onSave={handleSave}
+            hasUnsavedChanges={hasUnsavedChanges}
+            isSaving={isSaving}
           />
         </aside>
 

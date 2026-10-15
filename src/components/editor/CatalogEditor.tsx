@@ -10,11 +10,17 @@ import { Palette, Flame, BookOpen } from 'lucide-react';
 interface CatalogEditorProps {
   catalog: Catalog;
   onChange: (updatedCatalog: Catalog) => void;
+  onSave?: () => void;
+  hasUnsavedChanges?: boolean;
+  isSaving?: boolean;
 }
 
 export const CatalogEditor: React.FC<CatalogEditorProps> = ({
   catalog,
   onChange,
+  onSave,
+  hasUnsavedChanges,
+  isSaving,
 }) => {
   const [activeTab, setActiveTab] = useState<'theme' | 'products' | 'brand'>('products');
 
@@ -94,6 +100,9 @@ export const CatalogEditor: React.FC<CatalogEditorProps> = ({
             catalog={catalog}
             onChange={handleProductsChange}
             onUpdateCatalog={onChange}
+            onSave={onSave}
+            hasUnsavedChanges={hasUnsavedChanges}
+            isSaving={isSaving}
           />
         )}
 

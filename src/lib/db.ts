@@ -373,16 +373,17 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
   try {
     await connection.beginTransaction();
 
-    const catalogId = catalog.id || `catalog_${Date.now()}`;
+    const rawCatalogId = (catalog.id || '').trim();
     const slug = (catalog.slug || `catalogo-${Date.now()}`)
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9_-]/g, '-');
 
     // Ownership check: If catalog exists, verify that the current user is the owner
+    // Search both by ID and by Slug to find any existing record in MySQL
     const [existingRows] = await connection.query<mysql.RowDataPacket[]>(
-      'SELECT id, user_id FROM catalogs WHERE id = ? OR slug = ? LIMIT 1',
-      [catalogId, slug]
+      'SELECT id, slug, user_id FROM catalogs WHERE id = ? OR slug = ? LIMIT 1',
+      [rawCatalogId || '___none___', slug]
     );
 
     if (existingRows.length > 0 && userId) {
@@ -392,12 +393,18 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
       }
     }
 
+    // CRITICAL: Always use the existing catalog's true database ID if found,
+    // to prevent foreign key constraint failures (ER_NO_REFERENCED_ROW_2) when inserting products.
+    const resolvedCatalogId = (existingRows.length > 0 && existingRows[0].id)
+      ? String(existingRows[0].id)
+      : (rawCatalogId || `catalog_${Date.now()}`);
+
     const effectiveUserId = userId || catalog.userId || (existingRows.length > 0 ? existingRows[0].user_id : null);
 
     const themeJson = JSON.stringify(catalog.theme || {});
     const contactJson = JSON.stringify(catalog.contact || {});
 
-    // Upsert catalog record
+    // Upsert catalog record with the resolved ID
     await connection.query(
       `
       INSERT INTO catalogs (
@@ -426,7 +433,7 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
         updated_at = NOW()
       `,
       [
-        catalogId,
+        resolvedCatalogId,
         slug,
         catalog.title || 'Catálogo',
         catalog.subtitle || '',
@@ -446,16 +453,34 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
     );
 
     // Synchronize products:
-    // Delete existing products for this catalog and reinsert to maintain exact order and deletions
-    await connection.query('DELETE FROM products WHERE catalog_id = ?', [catalogId]);
+    // Delete existing products for this catalog using resolvedCatalogId
+    await connection.query('DELETE FROM products WHERE catalog_id = ?', [resolvedCatalogId]);
+
+    const savedProducts: Product[] = [];
+    const seenProductIds = new Set<string>();
 
     if (catalog.products && catalog.products.length > 0) {
       for (let i = 0; i < catalog.products.length; i++) {
         const p = catalog.products[i];
-        const productId = p.id || `prod_${Date.now()}_${i}`;
-        const fragrancesJson = JSON.stringify(p.fragrances || []);
-        const colorsJson = JSON.stringify(p.colors || []);
-        const includesJson = JSON.stringify(p.includes || []);
+        if (!p) continue;
+
+        // Ensure unique product ID without primary key collision
+        let productId = (p.id || '').trim();
+        if (!productId || seenProductIds.has(productId)) {
+          productId = `candle-${Date.now()}-${i}-${Math.random().toString(36).substring(2, 7)}`;
+        }
+        seenProductIds.add(productId);
+
+        const price = Number.isFinite(Number(p.price)) ? Number(p.price) : 0;
+        const heightCm = Number.isFinite(Number(p.heightCm)) ? Number(p.heightCm) : 0;
+        const widthCm = Number.isFinite(Number(p.widthCm)) ? Number(p.widthCm) : 0;
+        const burnTimeHours = (p.burnTimeHours != null && Number.isFinite(Number(p.burnTimeHours))) ? Number(p.burnTimeHours) : null;
+        const waxType = p.waxType || '';
+        const isSeasonalSpecial = Boolean(p.isSeasonalSpecial);
+
+        const fragrancesJson = JSON.stringify(Array.isArray(p.fragrances) ? p.fragrances : []);
+        const colorsJson = JSON.stringify(Array.isArray(p.colors) ? p.colors : []);
+        const includesJson = JSON.stringify(Array.isArray(p.includes) ? p.includes : []);
 
         await connection.query(
           `
@@ -467,24 +492,38 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
           `,
           [
             productId,
-            catalogId,
+            resolvedCatalogId,
             p.name || 'Producto',
             p.sku || '',
-            p.price || 0,
+            price,
             p.currency || '$',
             p.description || '',
-            p.heightCm || 0,
-            p.widthCm || 0,
+            heightCm,
+            widthCm,
             fragrancesJson,
             colorsJson,
             includesJson,
             p.image || '',
-            p.burnTimeHours ?? null,
-            p.waxType || '',
-            p.isSeasonalSpecial ? 1 : 0,
+            burnTimeHours,
+            waxType,
+            isSeasonalSpecial ? 1 : 0,
             i,
           ]
         );
+
+        savedProducts.push({
+          ...p,
+          id: productId,
+          price,
+          heightCm,
+          widthCm,
+          burnTimeHours: burnTimeHours ?? undefined,
+          waxType: waxType || undefined,
+          isSeasonalSpecial,
+          fragrances: Array.isArray(p.fragrances) ? p.fragrances : [],
+          colors: Array.isArray(p.colors) ? p.colors : [],
+          includes: Array.isArray(p.includes) ? p.includes : [],
+        });
       }
     }
 
@@ -492,9 +531,10 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
 
     return {
       ...catalog,
-      id: catalogId,
+      id: resolvedCatalogId,
       slug,
       userId: effectiveUserId ? Number(effectiveUserId) : undefined,
+      products: savedProducts,
       updatedAt: new Date().toISOString(),
     };
   } catch (err) {

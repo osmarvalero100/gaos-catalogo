@@ -13,6 +13,7 @@ import {
   ChevronDown,
   User,
   LogOut,
+  Loader2,
 } from 'lucide-react';
 
 interface HeaderNavbarProps {
@@ -24,6 +25,7 @@ interface HeaderNavbarProps {
   onSave: () => void;
   onOpenCatalogManager: () => void;
   isSaved?: boolean;
+  isSaving?: boolean;
   hasUnsavedChanges?: boolean;
   saveMessage?: string;
   onDownloadJson?: () => void;
@@ -39,6 +41,7 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
   onSave,
   onOpenCatalogManager,
   isSaved = false,
+  isSaving = false,
   hasUnsavedChanges = false,
   saveMessage,
   onDownloadJson,
@@ -129,22 +132,29 @@ export const HeaderNavbar: React.FC<HeaderNavbarProps> = ({
           <button
             type="button"
             onClick={onSave}
+            disabled={isSaving}
             title="Guarda los datos en la base de datos MySQL (85.31.63.21) y en el navegador"
-            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all ${
-              isSaved
+            className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              isSaving
+                ? 'bg-amber-700 text-white opacity-90 cursor-wait shadow-xs'
+                : isSaved
                 ? 'bg-emerald-950/80 text-emerald-300 border border-emerald-700 shadow-xs'
                 : hasUnsavedChanges
                 ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-xs'
                 : 'bg-emerald-700 hover:bg-emerald-600 text-white shadow-xs'
             }`}
           >
-            {isSaved ? (
+            {isSaving ? (
+              <Loader2 className="w-3.5 h-3.5 text-white animate-spin" />
+            ) : isSaved ? (
               <Check className="w-3.5 h-3.5 text-emerald-400" />
             ) : (
               <Save className="w-3.5 h-3.5 text-white" />
             )}
             <span>
-              {isSaved
+              {isSaving
+                ? 'Guardando en MySQL...'
+                : isSaved
                 ? saveMessage || 'Guardado en MySQL'
                 : hasUnsavedChanges
                 ? 'Guardar Cambios ●'
