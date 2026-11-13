@@ -182,6 +182,8 @@ export async function initDatabase(): Promise<void> {
         wax_type VARCHAR(100) DEFAULT '',
         is_seasonal_special TINYINT(1) DEFAULT 0,
         discount_label VARCHAR(100) NULL DEFAULT NULL,
+        is_sold_out TINYINT(1) DEFAULT 0,
+        is_paused TINYINT(1) DEFAULT 0,
         sort_order INT DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -238,6 +240,30 @@ export async function initDatabase(): Promise<void> {
       }
     } catch (migErr) {
       console.warn('Could not check or alter discount_label column:', migErr);
+    }
+
+    // Ensure is_sold_out column exists in existing products table
+    try {
+      const [cols] = await pool.query<mysql.RowDataPacket[]>(
+        "SHOW COLUMNS FROM products LIKE 'is_sold_out'"
+      );
+      if (cols.length === 0) {
+        await pool.query('ALTER TABLE products ADD COLUMN is_sold_out TINYINT(1) DEFAULT 0 AFTER discount_label');
+      }
+    } catch (migErr) {
+      console.warn('Could not check or alter is_sold_out column:', migErr);
+    }
+
+    // Ensure is_paused column exists in existing products table
+    try {
+      const [cols] = await pool.query<mysql.RowDataPacket[]>(
+        "SHOW COLUMNS FROM products LIKE 'is_paused'"
+      );
+      if (cols.length === 0) {
+        await pool.query('ALTER TABLE products ADD COLUMN is_paused TINYINT(1) DEFAULT 0 AFTER is_sold_out');
+      }
+    } catch (migErr) {
+      console.warn('Could not check or alter is_paused column:', migErr);
     }
 
     // 5. Ensure default user gaos.storeco@gmail.com exists (Password: G40sC@ndles)
@@ -390,6 +416,8 @@ export async function getCatalogByIdOrSlug(idOrSlug: string): Promise<Catalog | 
     burnTimeHours: p.burnTimeHours != null ? Number(p.burn_time_hours) : (p.burn_time_hours != null ? Number(p.burn_time_hours) : undefined),
     waxType: p.wax_type || undefined,
     isSeasonalSpecial: Boolean(p.is_seasonal_special),
+    isSoldOut: Boolean(p.is_sold_out),
+    isPaused: Boolean(p.is_paused),
     groupId: p.group_id || undefined,
   }));
 
@@ -545,6 +573,8 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
         const burnTimeHours = (p.burnTimeHours != null && Number.isFinite(Number(p.burnTimeHours))) ? Number(p.burnTimeHours) : null;
         const waxType = p.waxType || '';
         const isSeasonalSpecial = Boolean(p.isSeasonalSpecial);
+        const isSoldOut = Boolean(p.isSoldOut);
+        const isPaused = Boolean(p.isPaused);
 
         const fragrancesJson = JSON.stringify(Array.isArray(p.fragrances) ? p.fragrances : []);
         const colorsJson = JSON.stringify(Array.isArray(p.colors) ? p.colors : []);
@@ -555,8 +585,9 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
           INSERT INTO products (
             id, catalog_id, group_id, name, sku, price, original_price, currency, description,
             height_cm, width_cm, fragrances, colors, includes, image,
-            burn_time_hours, wax_type, is_seasonal_special, discount_label, sort_order
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            burn_time_hours, wax_type, is_seasonal_special, discount_label,
+            is_sold_out, is_paused, sort_order
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           `,
           [
             productId,
@@ -578,6 +609,8 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
             waxType,
             isSeasonalSpecial ? 1 : 0,
             discountLabel,
+            isSoldOut ? 1 : 0,
+            isPaused ? 1 : 0,
             i,
           ]
         );
@@ -594,6 +627,8 @@ export async function saveCatalogToDb(catalog: Catalog, userId?: number): Promis
           burnTimeHours: burnTimeHours ?? undefined,
           waxType: waxType || undefined,
           isSeasonalSpecial,
+          isSoldOut,
+          isPaused,
           fragrances: Array.isArray(p.fragrances) ? p.fragrances : [],
           colors: Array.isArray(p.colors) ? p.colors : [],
           includes: Array.isArray(p.includes) ? p.includes : [],

@@ -21,6 +21,8 @@ import {
   Tag,
   Percent,
   Globe,
+  Pause,
+  Play,
 } from 'lucide-react';
 import { SEASONAL_PRESETS } from '../../data/seasonalThemes';
 import { normalizeProductGroups, getGroupedProducts } from '../../lib/catalogGroups';
@@ -64,9 +66,30 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
 
   // Filter view by group (null = show all)
   const [selectedFilterGroupId, setSelectedFilterGroupId] = useState<string | null>(null);
+  // Filter view by status: all, active (visible), paused (hidden), sold_out
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'paused' | 'sold_out'>('all');
 
   const currentGroups = normalizeProductGroups(catalog);
-  const groupedProducts = getGroupedProducts(catalog);
+  const groupedProducts = getGroupedProducts(catalog, { includePaused: true });
+
+  const totalCandles = catalog.products.length;
+  const activeCandles = catalog.products.filter((p) => !p.isPaused).length;
+  const pausedCandles = catalog.products.filter((p) => p.isPaused).length;
+  const soldOutCandles = catalog.products.filter((p) => p.isSoldOut).length;
+
+  const handleToggleSoldOut = (id: string) => {
+    const updated = catalog.products.map((p) =>
+      p.id === id ? { ...p, isSoldOut: !p.isSoldOut } : p
+    );
+    syncCatalog(updated);
+  };
+
+  const handleTogglePause = (id: string) => {
+    const updated = catalog.products.map((p) =>
+      p.id === id ? { ...p, isPaused: !p.isPaused } : p
+    );
+    syncCatalog(updated);
+  };
 
   const handleOpenNew = (groupId?: string) => {
     setEditingProduct(null);
@@ -350,9 +373,23 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
   const suggestedIncludes =
     SEASONAL_PRESETS[catalog.theme.season]?.sampleIncludes || [];
 
-  const visibleGroupedProducts = selectedFilterGroupId
+  const filteredByGroup = selectedFilterGroupId
     ? groupedProducts.filter((item) => item.group.id === selectedFilterGroupId)
     : groupedProducts;
+
+  const visibleGroupedProducts = filteredByGroup.map((item) => {
+    if (statusFilter === 'all') return item;
+    if (statusFilter === 'active') {
+      return { ...item, products: item.products.filter((p) => !p.isPaused) };
+    }
+    if (statusFilter === 'paused') {
+      return { ...item, products: item.products.filter((p) => p.isPaused) };
+    }
+    if (statusFilter === 'sold_out') {
+      return { ...item, products: item.products.filter((p) => p.isSoldOut) };
+    }
+    return item;
+  });
 
   return (
     <div className="space-y-4">
@@ -501,6 +538,75 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
           </div>
         </div>
       )}
+
+      {/* Status Filter Tabs (Todas / Activas / Pausadas / Agotadas) */}
+      <div className="flex flex-wrap items-center justify-between gap-2 p-2 bg-stone-100/70 border border-stone-200/80 rounded-xl">
+        <div className="flex items-center gap-1.5 text-xs overflow-x-auto flex-1">
+          <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider pl-1 pr-1 hidden sm:inline">
+            Estado:
+          </span>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('all')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              statusFilter === 'all'
+                ? 'bg-stone-900 text-white shadow-2xs'
+                : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80'
+            }`}
+          >
+            Todas ({totalCandles})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('active')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              statusFilter === 'active'
+                ? 'bg-emerald-800 text-white shadow-2xs'
+                : 'bg-white text-stone-600 hover:bg-stone-50 border border-stone-200/80'
+            }`}
+            title="Velas activas y visibles en el catálogo"
+          >
+            Activas ({activeCandles})
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('paused')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+              statusFilter === 'paused'
+                ? 'bg-amber-600 text-white shadow-2xs'
+                : pausedCandles > 0
+                ? 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 font-bold'
+                : 'bg-white text-stone-500 hover:bg-stone-50 border border-stone-200/80'
+            }`}
+            title="Velas sin unidades pausadas temporalmente (ocultas en el catálogo)"
+          >
+            <Pause className="w-3 h-3 text-amber-600" />
+            <span>Pausadas ({pausedCandles})</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setStatusFilter('sold_out')}
+            className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              statusFilter === 'sold_out'
+                ? 'bg-stone-900 text-white shadow-2xs'
+                : soldOutCandles > 0
+                ? 'bg-stone-50 text-stone-900 border border-stone-300 hover:bg-stone-100 font-bold'
+                : 'bg-white text-stone-500 hover:bg-stone-50 border border-stone-200/80'
+            }`}
+            title="Velas marcadas como agotadas"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            <span>Agotadas ({soldOutCandles})</span>
+          </button>
+        </div>
+
+        {pausedCandles > 0 && (
+          <span className="text-[11px] font-medium text-amber-800 bg-amber-100/70 border border-amber-300/80 px-2 py-0.5 rounded-lg flex items-center gap-1">
+            <Pause className="w-3 h-3 text-amber-600 shrink-0" />
+            <span>{pausedCandles} {pausedCandles === 1 ? 'vela oculta' : 'velas ocultas'} en catálogo</span>
+          </span>
+        )}
+      </div>
 
       {/* Filter Chips Bar (When multiple groups exist) */}
       {currentGroups.length > 1 && (
@@ -653,9 +759,16 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
               {/* Group Meta & Action Buttons */}
               {!isEditingThisGroup && (
                 <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-stone-100 text-stone-600 border border-stone-200">
-                    {groupProducts.length} {groupProducts.length === 1 ? 'vela' : 'velas'} · {pageCount} {pageCount === 1 ? 'pág. A4' : 'págs. A4'}
-                  </span>
+                  {(() => {
+                    const groupActive = groupProducts.filter((p) => !p.isPaused).length;
+                    const groupPaused = groupProducts.filter((p) => p.isPaused).length;
+                    return (
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-stone-100 text-stone-600 border border-stone-200">
+                        {groupProducts.length} {groupProducts.length === 1 ? 'vela' : 'velas'}
+                        {groupPaused > 0 ? ` (${groupActive} activas, ${groupPaused} pausadas)` : ''} · {pageCount} {pageCount === 1 ? 'pág. A4' : 'págs. A4'}
+                      </span>
+                    );
+                  })()}
 
                   <button
                     type="button"
@@ -695,22 +808,34 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
             {groupProducts.length === 0 ? (
               <div className="text-center py-6 px-4 border-2 border-dashed border-stone-200 rounded-xl bg-stone-50/50">
                 <p className="text-xs text-stone-500 font-medium mb-2">
-                  No hay velas asignadas a "{group.name}" todavía.
+                  {statusFilter === 'all'
+                    ? `No hay velas asignadas a "${group.name}" todavía.`
+                    : statusFilter === 'paused'
+                    ? `No hay velas pausadas en "${group.name}".`
+                    : statusFilter === 'sold_out'
+                    ? `No hay velas agotadas en "${group.name}".`
+                    : `No hay velas activas en "${group.name}".`}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => handleOpenNew(group.id)}
-                  className="px-3 py-1.5 bg-emerald-800 text-white text-xs font-semibold rounded-lg hover:bg-emerald-900 transition-colors"
-                >
-                  Agregar vela a esta agrupación
-                </button>
+                {statusFilter === 'all' && (
+                  <button
+                    type="button"
+                    onClick={() => handleOpenNew(group.id)}
+                    className="px-3 py-1.5 bg-emerald-800 text-white text-xs font-semibold rounded-lg hover:bg-emerald-900 transition-colors"
+                  >
+                    Agregar vela a esta agrupación
+                  </button>
+                )}
               </div>
             ) : (
               <div className="space-y-3">
                 {groupProducts.map((prod, indexInGroup) => (
                   <div
                     key={prod.id}
-                    className="p-3 bg-stone-50/70 hover:bg-white border border-stone-200 hover:border-stone-300 rounded-xl shadow-2xs hover:shadow-xs transition-all space-y-2.5"
+                    className={`p-3 rounded-xl shadow-2xs hover:shadow-xs transition-all space-y-2.5 border ${
+                      prod.isPaused
+                        ? 'bg-amber-50/40 hover:bg-amber-50/70 border-amber-300/80'
+                        : 'bg-stone-50/70 hover:bg-white border-stone-200 hover:border-stone-300'
+                    }`}
                   >
                     {/* Top Row: Reorder + Thumbnail + Details + Action Buttons */}
                     <div className="flex items-start gap-3">
@@ -741,8 +866,21 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
                         <img
                           src={prod.image || 'https://images.unsplash.com/photo-1570823635306-250abb06d4b3?auto=format&fit=crop&w=600&q=80'}
                           alt={prod.name}
-                          className="w-full h-full object-cover"
+                          className={`w-full h-full object-cover ${prod.isPaused ? 'opacity-70 grayscale-30' : ''}`}
                         />
+                        {prod.isSoldOut && (
+                          <span className="absolute bottom-1 left-1 right-1 text-center bg-stone-900/95 text-white text-[8px] font-bold uppercase rounded py-0.5 tracking-wider">
+                            Agotado
+                          </span>
+                        )}
+                        {prod.isPaused && (
+                          <span
+                            className="absolute top-1 left-1 bg-amber-500/95 text-white p-0.5 rounded shadow-xs"
+                            title="Producto pausado (oculto en el catálogo)"
+                          >
+                            <Pause className="w-2.5 h-2.5" />
+                          </span>
+                        )}
                       </div>
 
                       {/* Info & Metadata */}
@@ -785,35 +923,103 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
                                   {prod.discountLabel}
                                 </span>
                               )}
+                              {prod.isSoldOut && (
+                                <span className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider text-white bg-stone-900 px-1.5 py-0.2 rounded shadow-2xs">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                                  Agotado
+                                </span>
+                              )}
+                              {prod.isPaused && (
+                                <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
+                                  <Pause className="w-2.5 h-2.5 text-amber-700" />
+                                  Pausado (Oculto)
+                                </span>
+                              )}
                             </div>
                           </div>
 
-                          {/* Action Buttons: Edit, Duplicate, Delete */}
-                          <div className="flex items-center gap-0.5 shrink-0 bg-white p-0.5 rounded-lg border border-stone-200 shadow-2xs">
+                          {/* Quick Status Toggles & Action Buttons */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            {/* Toggle Agotado */}
                             <button
                               type="button"
-                              onClick={() => handleEdit(prod)}
-                              className="p-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-md transition-colors cursor-pointer"
-                              title="Editar vela"
+                              onClick={() => handleToggleSoldOut(prod.id)}
+                              className={`px-2 py-1 text-xs font-semibold rounded-lg flex items-center gap-1 transition-all cursor-pointer border ${
+                                prod.isSoldOut
+                                  ? 'bg-stone-900 text-white border-stone-900 shadow-2xs'
+                                  : 'bg-white hover:bg-stone-100 text-stone-600 border-stone-200 hover:border-stone-300'
+                              }`}
+                              title={
+                                prod.isSoldOut
+                                  ? 'Producto marcado como Agotado. Clic para marcar como disponible'
+                                  : 'Clic para marcar este producto como Agotado'
+                              }
                             >
-                              <Edit2 className="w-3.5 h-3.5" />
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  prod.isSoldOut ? 'bg-rose-500' : 'bg-stone-400'
+                                }`}
+                              />
+                              <span className="hidden sm:inline">
+                                {prod.isSoldOut ? 'Agotado' : 'Agotado'}
+                              </span>
                             </button>
+
+                            {/* Toggle Pausa */}
                             <button
                               type="button"
-                              onClick={() => handleDuplicateProduct(prod)}
-                              className="p-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-md transition-colors cursor-pointer"
-                              title="Duplicar vela"
+                              onClick={() => handleTogglePause(prod.id)}
+                              className={`px-2 py-1 text-xs font-semibold rounded-lg flex items-center gap-1 transition-all cursor-pointer border ${
+                                prod.isPaused
+                                  ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300 font-bold shadow-2xs'
+                                  : 'bg-white hover:bg-stone-100 text-stone-600 border-stone-200 hover:border-stone-300'
+                              }`}
+                              title={
+                                prod.isPaused
+                                  ? 'Producto pausado (oculto en catálogo). Clic para reanudar'
+                                  : 'Pausar producto (ocultar temporalmente del catálogo si no tiene unidades)'
+                              }
                             >
-                              <Copy className="w-3.5 h-3.5" />
+                              {prod.isPaused ? (
+                                <>
+                                  <Play className="w-3 h-3 text-emerald-700" />
+                                  <span className="hidden sm:inline">Reanudar</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Pause className="w-3 h-3 text-amber-600" />
+                                  <span className="hidden sm:inline">Pausar</span>
+                                </>
+                              )}
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteProduct(prod.id)}
-                              className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
-                              title="Eliminar vela"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
+
+                            {/* Action Buttons: Edit, Duplicate, Delete */}
+                            <div className="flex items-center gap-0.5 bg-white p-0.5 rounded-lg border border-stone-200 shadow-2xs">
+                              <button
+                                type="button"
+                                onClick={() => handleEdit(prod)}
+                                className="p-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-md transition-colors cursor-pointer"
+                                title="Editar vela"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDuplicateProduct(prod)}
+                                className="p-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-md transition-colors cursor-pointer"
+                                title="Duplicar vela"
+                              >
+                                <Copy className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteProduct(prod.id)}
+                                className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
+                                title="Eliminar vela"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
                           </div>
                         </div>
 

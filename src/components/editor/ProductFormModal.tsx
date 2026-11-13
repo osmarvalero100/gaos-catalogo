@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Product, CandleColor, ProductGroup } from '../../types/catalog';
 import { VisualDimensionIndicator } from '../preview/VisualDimensionIndicator';
-import { X, Upload, Plus, Trash2, Sparkles, Image as ImageIcon, PackageCheck, Check, Layers, Tag, Percent, BadgePercent, Globe } from 'lucide-react';
+import { X, Upload, Plus, Trash2, Sparkles, Image as ImageIcon, PackageCheck, Check, Layers, Tag, Percent, BadgePercent, Globe, Pause } from 'lucide-react';
 
 export interface DiscountScopeAction {
   scope: 'single' | 'group' | 'catalog';
@@ -90,7 +90,13 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
 
   const [formData, setFormData] = useState<Product>(
     product
-      ? { ...product, includes: product.includes || [], groupId: resolvedInitialGroupId }
+      ? {
+          ...product,
+          isSoldOut: Boolean(product.isSoldOut),
+          isPaused: Boolean(product.isPaused),
+          includes: product.includes || [],
+          groupId: resolvedInitialGroupId,
+        }
       : {
           id: generateUniqueId(),
           name: '',
@@ -110,6 +116,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
           burnTimeHours: 40,
           waxType: 'Cera de Soya 100% Ecológica',
           isSeasonalSpecial: true,
+          isSoldOut: false,
+          isPaused: false,
           groupId: resolvedInitialGroupId,
         }
   );
@@ -133,6 +141,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     if (product) {
       setFormData({
         ...product,
+        isSoldOut: Boolean(product.isSoldOut),
+        isPaused: Boolean(product.isPaused),
         price: hasInitDiscount ? product.price : regPrice,
         includes: product.includes || [],
         groupId: product.groupId || defaultGroupId || (groups && groups.length > 0 ? groups[0].id : undefined),
@@ -157,6 +167,8 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
         burnTimeHours: 40,
         waxType: 'Cera de Soya 100% Ecológica',
         isSeasonalSpecial: true,
+        isSoldOut: false,
+        isPaused: false,
         groupId: defaultGroupId || (groups && groups.length > 0 ? groups[0].id : undefined),
       });
     }
@@ -1199,18 +1211,92 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
               />
             </div>
 
-            <div className="flex items-center pt-5">
-              <label className="inline-flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={formData.isSeasonalSpecial || false}
-                  onChange={(e) => setFormData({ ...formData, isSeasonalSpecial: e.target.checked })}
-                  className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
-                />
-                <span className="text-xs font-semibold text-stone-700">
-                  Marcar como "Edición Especial"
-                </span>
-              </label>
+            {/* Disponibilidad y Estados del Producto */}
+            <div className="pt-4 border-t border-stone-200">
+              <h4 className="text-xs font-bold text-stone-900 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+                <Tag className="w-3.5 h-3.5 text-stone-600" />
+                <span>Disponibilidad & Estado en Catálogo</span>
+              </h4>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Opción Agotado */}
+                <label
+                  className={`relative flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                    formData.isSoldOut
+                      ? 'bg-stone-900/5 border-stone-800 ring-1 ring-stone-800'
+                      : 'bg-white border-stone-200 hover:border-stone-300'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.isSoldOut || false}
+                    onChange={(e) => setFormData({ ...formData, isSoldOut: e.target.checked })}
+                    className="mt-0.5 rounded text-stone-900 focus:ring-stone-800 w-4 h-4 cursor-pointer"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-stone-900">
+                        Marcar como Agotado
+                      </span>
+                      {formData.isSoldOut && (
+                        <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-stone-900 text-white uppercase">
+                          Agotado
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-stone-500 mt-0.5 leading-snug">
+                      Se muestra en el catálogo con aviso de sin stock y permite a los clientes consultar disponibilidad por WhatsApp.
+                    </p>
+                  </div>
+                </label>
+
+                {/* Opción Pausa */}
+                <label
+                  className={`relative flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer ${
+                    formData.isPaused
+                      ? 'bg-amber-500/10 border-amber-600 ring-1 ring-amber-600'
+                      : 'bg-white border-stone-200 hover:border-stone-300'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={formData.isPaused || false}
+                    onChange={(e) => setFormData({ ...formData, isPaused: e.target.checked })}
+                    className="mt-0.5 rounded text-amber-600 focus:ring-amber-500 w-4 h-4 cursor-pointer"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-stone-900">
+                        Pausar Producto
+                      </span>
+                      {formData.isPaused && (
+                        <span className="px-1.5 py-0.2 rounded-full text-[9px] font-bold bg-amber-100 text-amber-800 border border-amber-300 uppercase flex items-center gap-0.5">
+                          <Pause className="w-2.5 h-2.5" />
+                          Oculto
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-stone-500 mt-0.5 leading-snug">
+                      Si el producto no tiene unidades, ocúltalo temporalmente del catálogo y del PDF sin necesidad de borrarlo.
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Opción Edición Especial */}
+              <div className="mt-3">
+                <label className="inline-flex items-center gap-2 cursor-pointer p-1.5 rounded-lg hover:bg-stone-50">
+                  <input
+                    type="checkbox"
+                    checked={formData.isSeasonalSpecial || false}
+                    onChange={(e) => setFormData({ ...formData, isSeasonalSpecial: e.target.checked })}
+                    className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                  />
+                  <span className="text-xs font-semibold text-stone-700">
+                    Destacar como "Edición Especial" de temporada
+                  </span>
+                </label>
+              </div>
             </div>
           </div>
         </form>
