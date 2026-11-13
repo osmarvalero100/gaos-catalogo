@@ -652,154 +652,157 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
             className="p-4 bg-white border border-stone-200 rounded-2xl shadow-2xs space-y-3 transition-all hover:border-stone-300"
           >
             {/* Group Header */}
-            <div className="flex flex-wrap items-center justify-between gap-2.5 pb-3 border-b border-stone-100">
-              {/* Group Title / Reorder */}
-              <div className="flex items-center gap-2 min-w-0 flex-1">
-                {/* Reorder Group Buttons */}
-                <div className="flex flex-col gap-0.5 text-stone-400 shrink-0">
-                  <button
-                    type="button"
-                    onClick={() => handleMoveGroup(groupIndex, 'up')}
-                    disabled={groupIndex === 0}
-                    className="p-1 hover:text-stone-900 disabled:opacity-20 cursor-pointer"
-                    title="Mover agrupación arriba"
-                  >
-                    <ArrowUp className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleMoveGroup(groupIndex, 'down')}
-                    disabled={groupIndex === currentGroups.length - 1}
-                    className="p-1 hover:text-stone-900 disabled:opacity-20 cursor-pointer"
-                    title="Mover agrupación abajo"
-                  >
-                    <ArrowDown className="w-3.5 h-3.5" />
-                  </button>
+            <div className="pb-2.5 border-b border-stone-100 space-y-1.5">
+              {/* Row 1: Title, Reorder & Action Buttons */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                  {/* Reorder Group Buttons */}
+                  <div className="flex items-center gap-0.5 text-stone-400 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => handleMoveGroup(groupIndex, 'up')}
+                      disabled={groupIndex === 0}
+                      className="p-1 hover:text-stone-900 disabled:opacity-20 cursor-pointer"
+                      title="Mover agrupación arriba"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleMoveGroup(groupIndex, 'down')}
+                      disabled={groupIndex === currentGroups.length - 1}
+                      className="p-1 hover:text-stone-900 disabled:opacity-20 cursor-pointer"
+                      title="Mover agrupación abajo"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {!isEditingThisGroup ? (
+                    <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                      <h4 className="text-xs sm:text-sm font-bold text-stone-900 tracking-wide truncate" title={group.name}>
+                        {group.name}
+                      </h4>
+                      <button
+                        type="button"
+                        onClick={() => handleStartEditGroup(group)}
+                        className="p-1 text-stone-400 hover:text-stone-800 hover:bg-stone-100 rounded transition-colors shrink-0"
+                        title="Editar título de agrupación"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
 
-                {/* Group Title and Info */}
-                <div className="min-w-0 flex-1">
-                  {isEditingThisGroup ? (
-                    <div className="space-y-1.5 p-2 bg-stone-50 rounded-lg border border-emerald-300">
-                      <div>
-                        <label className="block text-[10px] font-semibold text-stone-600 uppercase mb-0.5">
-                          Título de la Agrupación (Página A4)
-                        </label>
-                        <input
-                          type="text"
-                          value={tempGroupName}
-                          autoFocus
-                          onChange={(e) => setTempGroupName(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveEditGroup(group.id);
-                            if (e.key === 'Escape') setEditingGroupId(null);
-                          }}
-                          className="w-full px-2.5 py-1 text-xs bg-white border rounded font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[10px] font-semibold text-stone-600 uppercase mb-0.5">
-                          Subtítulo (Opcional)
-                        </label>
-                        <input
-                          type="text"
-                          value={tempGroupSubtitle}
-                          onChange={(e) => setTempGroupSubtitle(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleSaveEditGroup(group.id);
-                            if (e.key === 'Escape') setEditingGroupId(null);
-                          }}
-                          placeholder="Subtítulo de la sección"
-                          className="w-full px-2.5 py-1 text-xs bg-white border rounded text-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-600"
-                        />
-                      </div>
-                      <div className="flex items-center justify-end gap-1.5 pt-1">
-                        <button
-                          type="button"
-                          onClick={() => setEditingGroupId(null)}
-                          className="px-2 py-0.5 text-xs text-stone-600 hover:text-stone-900 rounded"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleSaveEditGroup(group.id)}
-                          className="px-2.5 py-0.5 bg-emerald-800 text-white text-xs font-bold rounded flex items-center gap-1 shadow-2xs"
-                        >
-                          <Check className="w-3 h-3" />
-                          <span>Guardar</span>
-                        </button>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-xs sm:text-sm font-bold text-stone-900 tracking-wide truncate" title={group.name}>
-                          {group.name}
-                        </h4>
-                        <button
-                          type="button"
-                          onClick={() => handleStartEditGroup(group)}
-                          className="p-1 text-stone-400 hover:text-stone-800 hover:bg-stone-100 rounded transition-colors shrink-0"
-                          title="Editar título de página"
-                        >
-                          <Edit2 className="w-3 h-3" />
-                        </button>
-                      </div>
-                      {group.subtitle && (
-                        <p className="text-[11px] text-stone-500 line-clamp-1">
-                          {group.subtitle}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
+                {/* Group Action Buttons: Dcto, Vela, Trash */}
+                {!isEditingThisGroup && (
+                  <div className="flex items-center gap-1 shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setDiscountModalTarget(group.id)}
+                      className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-800 text-xs font-semibold rounded-lg flex items-center gap-1 border border-rose-200 transition-colors cursor-pointer"
+                      title={`Gestionar descuentos en "${group.name}"`}
+                    >
+                      <BadgePercent className="w-3 h-3 text-rose-600" />
+                      <span>Dcto</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenNew(group.id)}
+                      className="px-2 py-1 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold rounded-lg flex items-center gap-1 border border-stone-200 transition-colors cursor-pointer"
+                      title={`Agregar vela directamente en "${group.name}"`}
+                    >
+                      <Plus className="w-3 h-3 text-emerald-800" />
+                      <span>Vela</span>
+                    </button>
+
+                    {currentGroups.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteGroup(group)}
+                        className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                        title="Eliminar esta agrupación"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
 
-              {/* Group Meta & Action Buttons */}
+              {/* Editing Group Form */}
+              {isEditingThisGroup && (
+                <div className="space-y-1.5 p-2 bg-stone-50 rounded-lg border border-emerald-300">
+                  <div>
+                    <label className="block text-[10px] font-semibold text-stone-600 uppercase mb-0.5">
+                      Título de la Agrupación (Página A4)
+                    </label>
+                    <input
+                      type="text"
+                      value={tempGroupName}
+                      autoFocus
+                      onChange={(e) => setTempGroupName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveEditGroup(group.id);
+                        if (e.key === 'Escape') setEditingGroupId(null);
+                      }}
+                      className="w-full px-2.5 py-1 text-xs bg-white border rounded font-semibold text-stone-900 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-semibold text-stone-600 uppercase mb-0.5">
+                      Subtítulo (Opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={tempGroupSubtitle}
+                      onChange={(e) => setTempGroupSubtitle(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleSaveEditGroup(group.id);
+                        if (e.key === 'Escape') setEditingGroupId(null);
+                      }}
+                      placeholder="Subtítulo de la sección"
+                      className="w-full px-2.5 py-1 text-xs bg-white border rounded text-stone-700 focus:outline-none focus:ring-2 focus:ring-emerald-600"
+                    />
+                  </div>
+                  <div className="flex items-center justify-end gap-1.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setEditingGroupId(null)}
+                      className="px-2 py-0.5 text-xs text-stone-600 hover:text-stone-900 rounded"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSaveEditGroup(group.id)}
+                      className="px-2.5 py-0.5 bg-emerald-800 text-white text-xs font-bold rounded flex items-center gap-1 shadow-2xs"
+                    >
+                      <Check className="w-3 h-3" />
+                      <span>Guardar</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Row 2: Subtitle & Page Badge */}
               {!isEditingThisGroup && (
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex items-center justify-between text-[11px] text-stone-500 gap-2">
+                  <p className="line-clamp-1 flex-1">
+                    {group.subtitle || ''}
+                  </p>
                   {(() => {
                     const groupActive = groupProducts.filter((p) => !p.isPaused).length;
                     const groupPaused = groupProducts.filter((p) => p.isPaused).length;
                     return (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-stone-100 text-stone-600 border border-stone-200">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-mono bg-stone-100 text-stone-600 border border-stone-200 shrink-0">
                         {groupProducts.length} {groupProducts.length === 1 ? 'vela' : 'velas'}
                         {groupPaused > 0 ? ` (${groupActive} activas, ${groupPaused} pausadas)` : ''} · {pageCount} {pageCount === 1 ? 'pág. A4' : 'págs. A4'}
                       </span>
                     );
                   })()}
-
-                  <button
-                    type="button"
-                    onClick={() => setDiscountModalTarget(group.id)}
-                    className="px-2 py-1 bg-rose-50 hover:bg-rose-100 text-rose-800 text-xs font-semibold rounded-lg flex items-center gap-1 border border-rose-200 transition-colors cursor-pointer"
-                    title={`Gestionar descuentos en "${group.name}"`}
-                  >
-                    <BadgePercent className="w-3 h-3 text-rose-600" />
-                    <span>Dcto</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => handleOpenNew(group.id)}
-                    className="px-2 py-1 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold rounded-lg flex items-center gap-1 border border-stone-200 transition-colors cursor-pointer"
-                    title={`Agregar vela directamente en "${group.name}"`}
-                  >
-                    <Plus className="w-3 h-3 text-emerald-800" />
-                    <span>Vela</span>
-                  </button>
-
-                  {currentGroups.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteGroup(group)}
-                      className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
-                      title="Eliminar esta agrupación"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  )}
                 </div>
               )}
             </div>
@@ -833,12 +836,12 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
                     key={prod.id}
                     className={`p-3 rounded-xl shadow-2xs hover:shadow-xs transition-all space-y-2.5 border ${
                       prod.isPaused
-                        ? 'bg-amber-50/40 hover:bg-amber-50/70 border-amber-300/80'
+                        ? 'bg-amber-50/30 hover:bg-amber-50/50 border-amber-300/80'
                         : 'bg-stone-50/70 hover:bg-white border-stone-200 hover:border-stone-300'
                     }`}
                   >
-                    {/* Top Row: Reorder + Thumbnail + Details + Action Buttons */}
-                    <div className="flex items-start gap-3">
+                    {/* Top Row: Reorder + Thumbnail + Details */}
+                    <div className="flex items-start gap-2.5">
                       {/* Reorder inside group */}
                       <div className="flex flex-col gap-0.5 text-stone-400 shrink-0 pt-0.5">
                         <button
@@ -861,15 +864,15 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
                         </button>
                       </div>
 
-                      {/* Thumbnail: Clean, unobstructed, fixed size */}
-                      <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-lg overflow-hidden border border-stone-200 bg-white shrink-0 shadow-2xs relative">
+                      {/* Thumbnail: Clean, unobstructed */}
+                      <div className="w-16 h-16 rounded-lg overflow-hidden border border-stone-200 bg-white shrink-0 shadow-2xs relative">
                         <img
                           src={prod.image || 'https://images.unsplash.com/photo-1570823635306-250abb06d4b3?auto=format&fit=crop&w=600&q=80'}
                           alt={prod.name}
-                          className={`w-full h-full object-cover ${prod.isPaused ? 'opacity-70 grayscale-30' : ''}`}
+                          className={`w-full h-full object-cover ${prod.isPaused ? 'opacity-65 grayscale-30' : ''}`}
                         />
                         {prod.isSoldOut && (
-                          <span className="absolute bottom-1 left-1 right-1 text-center bg-stone-900/95 text-white text-[8px] font-bold uppercase rounded py-0.5 tracking-wider">
+                          <span className="absolute bottom-0 inset-x-0 text-center bg-stone-900/95 text-white text-[8px] font-bold uppercase py-0.5 tracking-wider backdrop-blur-2xs">
                             Agotado
                           </span>
                         )}
@@ -884,148 +887,98 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
                       </div>
 
                       {/* Info & Metadata */}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0 flex-1">
-                            <h5 className="text-xs sm:text-sm font-bold text-stone-900 truncate" title={prod.name}>
-                              {prod.name}
-                            </h5>
-                            <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mt-0.5">
-                              {prod.originalPrice && prod.originalPrice > prod.price ? (
-                                <div className="flex items-center gap-1.5">
-                                  <span className="text-[11px] line-through text-stone-400 font-medium">
-                                    {catalog.theme.currencySymbol}{prod.originalPrice.toLocaleString()}
-                                  </span>
-                                  <span className="text-xs font-bold text-rose-700">
-                                    {catalog.theme.currencySymbol}{prod.price.toLocaleString()}
-                                  </span>
-                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-700">
-                                    -{Math.round(((prod.originalPrice - prod.price) / prod.originalPrice) * 100)}%
-                                  </span>
-                                </div>
-                              ) : (
-                                <span className="text-xs font-bold text-emerald-800">
-                                  {catalog.theme.currencySymbol}{prod.price.toLocaleString()}
-                                </span>
-                              )}
-                              {prod.sku && (
-                                <span className="text-[10px] font-mono uppercase bg-stone-100 text-stone-600 px-1.5 py-0.2 rounded border border-stone-200">
-                                  {prod.sku}
-                                </span>
-                              )}
-                              {prod.isSeasonalSpecial && (
-                                <span className="text-[9px] uppercase font-bold tracking-wider text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200">
-                                  Especial
-                                </span>
-                              )}
-                              {prod.originalPrice && prod.originalPrice > prod.price && prod.discountLabel && (
-                                <span className="text-[9px] uppercase font-bold tracking-wider text-rose-700 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
-                                  {prod.discountLabel}
-                                </span>
-                              )}
-                              {prod.isSoldOut && (
-                                <span className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider text-white bg-stone-900 px-1.5 py-0.2 rounded shadow-2xs">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                                  Agotado
-                                </span>
-                              )}
-                              {prod.isPaused && (
-                                <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300">
-                                  <Pause className="w-2.5 h-2.5 text-amber-700" />
-                                  Pausado (Oculto)
-                                </span>
-                              )}
-                            </div>
-                          </div>
+                      <div className="min-w-0 flex-1 space-y-1">
+                        {/* Title and Icon Action Buttons */}
+                        <div className="flex items-start justify-between gap-1.5">
+                          <h5 className="text-xs sm:text-sm font-bold text-stone-900 line-clamp-1 leading-snug flex-1" title={prod.name}>
+                            {prod.name}
+                          </h5>
 
-                          {/* Quick Status Toggles & Action Buttons */}
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            {/* Toggle Agotado */}
+                          {/* Action Buttons: Edit, Duplicate, Delete */}
+                          <div className="flex items-center gap-0.5 bg-stone-100 p-0.5 rounded-lg border border-stone-200/80 shrink-0">
                             <button
                               type="button"
-                              onClick={() => handleToggleSoldOut(prod.id)}
-                              className={`px-2 py-1 text-xs font-semibold rounded-lg flex items-center gap-1 transition-all cursor-pointer border ${
-                                prod.isSoldOut
-                                  ? 'bg-stone-900 text-white border-stone-900 shadow-2xs'
-                                  : 'bg-white hover:bg-stone-100 text-stone-600 border-stone-200 hover:border-stone-300'
-                              }`}
-                              title={
-                                prod.isSoldOut
-                                  ? 'Producto marcado como Agotado. Clic para marcar como disponible'
-                                  : 'Clic para marcar este producto como Agotado'
-                              }
+                              onClick={() => handleEdit(prod)}
+                              className="p-1 text-stone-600 hover:text-stone-900 hover:bg-white rounded transition-colors cursor-pointer"
+                              title="Editar vela"
                             >
-                              <span
-                                className={`w-1.5 h-1.5 rounded-full ${
-                                  prod.isSoldOut ? 'bg-rose-500' : 'bg-stone-400'
-                                }`}
-                              />
-                              <span className="hidden sm:inline">
-                                {prod.isSoldOut ? 'Agotado' : 'Agotado'}
-                              </span>
+                              <Edit2 className="w-3.5 h-3.5" />
                             </button>
-
-                            {/* Toggle Pausa */}
                             <button
                               type="button"
-                              onClick={() => handleTogglePause(prod.id)}
-                              className={`px-2 py-1 text-xs font-semibold rounded-lg flex items-center gap-1 transition-all cursor-pointer border ${
-                                prod.isPaused
-                                  ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300 font-bold shadow-2xs'
-                                  : 'bg-white hover:bg-stone-100 text-stone-600 border-stone-200 hover:border-stone-300'
-                              }`}
-                              title={
-                                prod.isPaused
-                                  ? 'Producto pausado (oculto en catálogo). Clic para reanudar'
-                                  : 'Pausar producto (ocultar temporalmente del catálogo si no tiene unidades)'
-                              }
+                              onClick={() => handleDuplicateProduct(prod)}
+                              className="p-1 text-stone-600 hover:text-stone-900 hover:bg-white rounded transition-colors cursor-pointer"
+                              title="Duplicar vela"
                             >
-                              {prod.isPaused ? (
-                                <>
-                                  <Play className="w-3 h-3 text-emerald-700" />
-                                  <span className="hidden sm:inline">Reanudar</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Pause className="w-3 h-3 text-amber-600" />
-                                  <span className="hidden sm:inline">Pausar</span>
-                                </>
-                              )}
+                              <Copy className="w-3.5 h-3.5" />
                             </button>
-
-                            {/* Action Buttons: Edit, Duplicate, Delete */}
-                            <div className="flex items-center gap-0.5 bg-white p-0.5 rounded-lg border border-stone-200 shadow-2xs">
-                              <button
-                                type="button"
-                                onClick={() => handleEdit(prod)}
-                                className="p-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-md transition-colors cursor-pointer"
-                                title="Editar vela"
-                              >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDuplicateProduct(prod)}
-                                className="p-1.5 text-stone-600 hover:text-stone-900 hover:bg-stone-100 rounded-md transition-colors cursor-pointer"
-                                title="Duplicar vela"
-                              >
-                                <Copy className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => handleDeleteProduct(prod.id)}
-                                className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors cursor-pointer"
-                                title="Eliminar vela"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteProduct(prod.id)}
+                              className="p-1 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                              title="Eliminar vela"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
                           </div>
                         </div>
 
-                        {/* Dimensions & Fragrance Badges Row */}
-                        <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                          <span className="inline-flex items-center gap-1 font-mono text-[10px] bg-white text-stone-700 px-2 py-0.5 rounded-md border border-stone-200 font-semibold shadow-2xs">
+                        {/* Price, Discount, SKU & Tags */}
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
+                          {prod.originalPrice && prod.originalPrice > prod.price ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[11px] line-through text-stone-400 font-medium">
+                                {catalog.theme.currencySymbol}{prod.originalPrice.toLocaleString()}
+                              </span>
+                              <span className="text-xs font-bold text-rose-700">
+                                {catalog.theme.currencySymbol}{prod.price.toLocaleString()}
+                              </span>
+                              <span className="text-[9px] font-bold px-1.5 py-0.2 rounded-full bg-rose-100 text-rose-700 whitespace-nowrap">
+                                -{Math.round(((prod.originalPrice - prod.price) / prod.originalPrice) * 100)}%
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-xs font-bold text-emerald-800">
+                              {catalog.theme.currencySymbol}{prod.price.toLocaleString()}
+                            </span>
+                          )}
+
+                          {prod.sku && (
+                            <span className="text-[10px] font-mono uppercase bg-stone-100 text-stone-600 px-1.5 py-0.2 rounded border border-stone-200 whitespace-nowrap">
+                              {prod.sku}
+                            </span>
+                          )}
+
+                          {prod.discountLabel && (
+                            <span className="text-[9px] uppercase font-bold tracking-wider text-rose-700 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200 whitespace-nowrap">
+                              {prod.discountLabel}
+                            </span>
+                          )}
+
+                          {prod.isSeasonalSpecial && (
+                            <span className="text-[9px] uppercase font-bold tracking-wider text-amber-700 bg-amber-50 px-1.5 py-0.2 rounded border border-amber-200 whitespace-nowrap">
+                              Especial
+                            </span>
+                          )}
+
+                          {prod.isSoldOut && (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider text-white bg-stone-900 px-1.5 py-0.2 rounded shadow-2xs whitespace-nowrap">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                              Agotado
+                            </span>
+                          )}
+
+                          {prod.isPaused && (
+                            <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-amber-900 bg-amber-100 px-1.5 py-0.2 rounded border border-amber-300 whitespace-nowrap">
+                              <Pause className="w-2.5 h-2.5 text-amber-700" />
+                              Pausado
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Dimensions & Fragrances Badges */}
+                        <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                          <span className="inline-flex items-center gap-1 font-mono text-[10px] bg-white text-stone-700 px-1.5 py-0.5 rounded border border-stone-200 font-semibold shadow-2xs whitespace-nowrap">
                             <span className="text-emerald-700 font-bold">↕</span>
                             <span>{prod.heightCm} cm</span>
                             <span className="text-stone-300">×</span>
@@ -1034,7 +987,7 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
                           </span>
 
                           {prod.fragrances && prod.fragrances.length > 0 && (
-                            <span className="truncate max-w-[150px] text-[10px] text-stone-500 bg-white px-2 py-0.5 rounded-md border border-stone-200 shadow-2xs">
+                            <span className="truncate max-w-[150px] text-[10px] text-stone-500 bg-white px-1.5 py-0.5 rounded border border-stone-200 shadow-2xs">
                               {prod.fragrances.join(', ')}
                             </span>
                           )}
@@ -1042,27 +995,81 @@ export const ProductListEditor: React.FC<ProductListEditorProps> = ({
                       </div>
                     </div>
 
-                    {/* Bottom Row: Move to Group Selector (when multiple groups exist) */}
-                    {currentGroups.length > 1 && (
-                      <div className="pt-2 border-t border-stone-200/70 flex items-center justify-between text-xs gap-2">
-                        <span className="text-[11px] text-stone-500 font-medium flex items-center gap-1 shrink-0">
-                          <MoveRight className="w-3 h-3 text-stone-400" />
-                          <span>Mover a:</span>
-                        </span>
-                        <select
-                          value={prod.groupId || group.id}
-                          onChange={(e) => handleMoveProductToGroup(prod.id, e.target.value)}
-                          className="flex-1 max-w-[240px] px-2.5 py-1 text-xs bg-white border border-stone-200 rounded-lg focus:ring-2 focus:ring-emerald-600 text-stone-800 font-medium shadow-2xs cursor-pointer truncate"
-                          title="Cambiar agrupación de esta vela"
+                    {/* Bottom Row: Quick Status Toggles (Agotado, Pausa) & Move to Group */}
+                    <div className="pt-2 border-t border-stone-200/70 flex flex-wrap items-center justify-between gap-2">
+                      {/* Quick Status Toggles */}
+                      <div className="flex items-center gap-1.5">
+                        {/* Toggle Agotado */}
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSoldOut(prod.id)}
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer border ${
+                            prod.isSoldOut
+                              ? 'bg-stone-900 text-white border-stone-900 shadow-2xs font-bold'
+                              : 'bg-white hover:bg-stone-100 text-stone-600 border-stone-200 hover:text-stone-900'
+                          }`}
+                          title={
+                            prod.isSoldOut
+                              ? 'Producto marcado como Agotado. Clic para reactivar stock'
+                              : 'Marcar este producto como Agotado'
+                          }
                         >
-                          {currentGroups.map((g) => (
-                            <option key={g.id} value={g.id}>
-                              {g.name}
-                            </option>
-                          ))}
-                        </select>
+                          <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                              prod.isSoldOut ? 'bg-rose-500 animate-pulse' : 'bg-stone-400'
+                            }`}
+                          />
+                          <span>{prod.isSoldOut ? 'Agotado' : 'Agotar'}</span>
+                        </button>
+
+                        {/* Toggle Pausa */}
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePause(prod.id)}
+                          className={`px-2.5 py-1 text-xs font-semibold rounded-lg flex items-center gap-1.5 transition-all cursor-pointer border ${
+                            prod.isPaused
+                              ? 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300 font-bold shadow-2xs'
+                              : 'bg-white hover:bg-stone-100 text-stone-600 border-stone-200 hover:text-stone-900'
+                          }`}
+                          title={
+                            prod.isPaused
+                              ? 'Producto pausado (oculto en catálogo). Clic para reactivar'
+                              : 'Pausar producto (ocultar temporalmente del catálogo si no tiene unidades)'
+                          }
+                        >
+                          {prod.isPaused ? (
+                            <>
+                              <Play className="w-3 h-3 text-emerald-700 fill-emerald-700" />
+                              <span>Reanudar</span>
+                            </>
+                          ) : (
+                            <>
+                              <Pause className="w-3 h-3 text-amber-600" />
+                              <span>Pausar</span>
+                            </>
+                          )}
+                        </button>
                       </div>
-                    )}
+
+                      {/* Move to Group selector */}
+                      {currentGroups.length > 1 && (
+                        <div className="flex items-center gap-1 text-xs ml-auto">
+                          <span className="text-[11px] text-stone-400 font-medium hidden sm:inline">Mover:</span>
+                          <select
+                            value={prod.groupId || group.id}
+                            onChange={(e) => handleMoveProductToGroup(prod.id, e.target.value)}
+                            className="px-2 py-1 text-xs bg-white border border-stone-200 rounded-lg text-stone-700 hover:border-stone-300 focus:ring-1 focus:ring-emerald-600 focus:outline-none max-w-[130px] truncate cursor-pointer font-medium shadow-2xs"
+                            title="Cambiar agrupación de esta vela"
+                          >
+                            {currentGroups.map((g) => (
+                              <option key={g.id} value={g.id}>
+                                {g.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
